@@ -5,6 +5,11 @@
 .vscode/launch.json
 .vscode/ipch
 
+# sdkconfig.<env> is regenerated from sdkconfig.defaults on every build and is
+# machine specific -- track only the defaults so the two can't drift apart.
+sdkconfig.*
+!sdkconfig.defaults
+
 # Stray CMake configure/build cache (leftover from a direct idf.py/cmake run
 # outside .pio; contains absolute machine paths, must never be committed)
 /CMakeCache.txt

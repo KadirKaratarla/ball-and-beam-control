@@ -1,0 +1,9 @@
+# ESP32-S3-N16R8: 16MB Quad SPI flash + 8MB Octal-mode PSRAM.
+# Only takes effect on a fresh sdkconfig generation (deleted the stale
+# sdkconfig.esp32-s3-devkitc-1 that was created for the wrong N8 default).
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
+
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
