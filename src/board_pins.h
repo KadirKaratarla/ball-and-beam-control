@@ -14,3 +14,16 @@
 #define PIN_TMC_EN      GPIO_NUM_15 // LOW = driver enabled
 
 #define TMC_UART_BAUD 115200
+
+// --- AS5600 magnetic encoder (I2C) ---
+// DIR is strapped to GND on the board; OUT and GPO are left unconnected.
+#define PIN_AS5600_SDA GPIO_NUM_8
+#define PIN_AS5600_SCL GPIO_NUM_9
+
+#define AS5600_I2C_ADDR 0x36
+
+// --- HC-SR04 ultrasonic range finder ---
+// Runs on 5V, so ECHO is a 5V output and reaches this pin through a
+// 1k/2k divider (5V -> 3.33V). TRIG takes our 3.3V drive directly.
+#define PIN_HCSR04_TRIG GPIO_NUM_10
+#define PIN_HCSR04_ECHO GPIO_NUM_11
