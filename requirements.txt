@@ -10,3 +10,6 @@ pseyepy @ git+https://github.com/bensondaled/pseyepy.git
 # pseyepy imports both at package load time
 pillow
 h5py
+
+# PC -> ESP32 position link over USB-Serial-JTAG
+pyserial==3.5
