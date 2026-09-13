@@ -1,0 +1,12 @@
+opencv-python==5.0.0.93
+numpy==2.5.3
+
+# PS3 Eye access through libusb rather than DirectShow -- reaches the native
+# 320x240 @ 125 fps mode and the exposure/gain registers, neither of which the
+# DirectShow driver exposed. Not on PyPI; builds a C extension, so MSVC build
+# tools are required.
+pseyepy @ git+https://github.com/bensondaled/pseyepy.git
+
+# pseyepy imports both at package load time
+pillow
+h5py

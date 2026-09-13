@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Session artifacts. Both are regenerated every start by design -- the
+# wizard runs on each launch because lighting, camera and rig all drift --
+# so a committed copy would only invite reuse of a stale one.
+calibration.json
+hsv_config.json
