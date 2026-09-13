@@ -14,7 +14,7 @@
 #define TEST_HCSR04       4
 #define TEST_PC_LINK      5 // Faz D
 
-#define ACTIVE_TEST TEST_PC_LINK
+#define ACTIVE_TEST TEST_AS5600
 
 void app_main(void)
 {

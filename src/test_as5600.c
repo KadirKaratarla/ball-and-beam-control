@@ -243,6 +243,30 @@ void test_as5600(void)
     report_read_time(1000000);
     device_detach();
 
+    // Register sanity check at both clocks. RAW_ANGLE and ANGLE must agree
+    // while ZPOS is 0, and the values must hold still with the shaft still.
+    // Added after one boot showed the readout alternating between two values
+    // every sample (3726 <-> 370, shaft untouched); it never reproduced across
+    // later boots, a repeated 1 MHz pass or wiggling the wires, so the cause
+    // stays unproven -- most likely a transient contact on freshly rewired
+    // leads. This block would show such a state directly if it recurs.
+    for (int pass = 0; pass < 2; pass++) {
+        uint32_t hz = pass == 0 ? I2C_SPEED_INITIAL : I2C_SPEED_OPERATING;
+        device_attach(hz);
+        printf("\n--- register check @ %u kHz (shaft still) ---\n", (unsigned)(hz / 1000));
+        printf("   raw  angle   zpos   raw-angle\n");
+        for (int i = 0; i < 12; i++) {
+            uint16_t raw = 0, angle = 0, zpos = 0;
+            as5600_read_u12(AS5600_REG_RAW_ANGLE, &raw);
+            as5600_read_u12(AS5600_REG_ANGLE, &angle);
+            as5600_read_u12(0x01, &zpos);
+            printf("%6u %6u %6u %10d\n", raw, angle, zpos,
+                   ((int)raw - (int)angle + AS5600_COUNTS) % AS5600_COUNTS);
+            vTaskDelay(pdMS_TO_TICKS(READOUT_PERIOD_MS));
+        }
+        device_detach();
+    }
+
     // 400 kHz is the settled operating speed: it costs 10.8% of the 2 ms loop
     // against 7.9% at 1 MHz, and that 60 us is not worth pushing this board's
     // 10k pull-ups past what Fast-mode Plus asks for.
