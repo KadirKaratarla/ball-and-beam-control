@@ -4,76 +4,52 @@
 #include "freertos/task.h"
 #include "driver/gpio.h"
 #include "driver/i2c_master.h"
-#include "driver/uart.h"
-#include "driver/uart_vfs.h"
 #include "esp_rom_sys.h"
 #include "esp_log.h"
 
 #include "board_pins.h"
 #include "tmc2208.h"
 
-// The rig: encoder on the motor shaft, short crank on the shaft, long rod
-// from the crank tip to the beam. Beam level <=> crank horizontal ("9
-// o'clock"). The beam's weight drops the crank to 6 o'clock whenever the
-// driver is off, loads the motor hardest at 9 (longest lever arm), and
-// makes 12 an unstable equilibrium. The working range is 6 -> 9 -> 12.
+// Fine sweep of the beam's working range under load, non-interactive.
 //
-// Two halves. First, with the driver off, the user moves the beam to 6, 9
-// and 12 by hand and presses Enter at each so the encoder value of every
-// landmark is known before anything moves under power. Then the driver
-// takes over at 6 -- where the load is zero -- and walks the crank to the
-// recorded 12 and back, comparing what was commanded against what the
-// encoder saw at every increment.
+// The landmarks were mapped by hand earlier: 6 -> 12 o'clock is ~1980
+// encoder counts and the encoder DEcreases going that way. The shaft-free
+// test proved the motor and driver are exact (one commanded rev = one
+// measured rev) and showed a periodic +-4 degree encoder error from the
+// magnet sitting off-centre. This run does two things with one pass:
+//
+//   1. under the beam's load, checks that every 1.8 degree command produces
+//      1.8 degrees of shaft -- the earlier 2-4x lurching turned out to be
+//      mis-wired coils, since corrected, and this is the confirmation
+//   2. records commanded-vs-measured at ~93 points across the range so the
+//      encoder's eccentricity error can be fitted and corrected in software
+//
+// The driver engages at 6 (zero load) and never parks near 12 (unstable);
+// it stops SWEEP_MARGIN_COUNTS short of it and comes back the same way.
 
 #define AS5600_REG_RAW_ANGLE 0x0C
 #define AS5600_COUNTS 4096
-#define USTEPS_PER_REV 51200 // 200 full steps x 256 microsteps (CHOPCONF.MRES=0)
+#define USTEPS_PER_REV 51200
 #define COUNTS_PER_USTEP ((double)AS5600_COUNTS / USTEPS_PER_REV)
 
-// Higher than the bring-up's 16: crossing 9 o'clock the motor works
-// against the beam's full lever arm, and slipping there is what this
-// test measures, not what it should cause.
 #define TMC_IRUN       20
 #define TMC_IHOLD      12
 #define TMC_IHOLDDELAY 4
 
-#define USTEPS_PER_INCREMENT 512  // 3.6 deg of shaft per increment
-#define STEP_HALF_PERIOD_US  40   // 12.5k usteps/s ~ 15 rpm, gentle under load
-#define PROBE_USTEPS         256  // one full step to learn which way DIR=0 goes
+#define SPAN_6_TO_12_COUNTS 1980 // from the manual landmark mapping
+#define SWEEP_MARGIN_COUNTS   80 // stop ~7 deg short of 12
+#define USTEPS_PER_INCREMENT 256 // 1.8 deg, 20.48 counts
+#define STEP_HALF_PERIOD_US   40
+#define SETTLE_MS             25
 
-// Guards for the powered sweep.
-#define OVERSHOOT_LIMIT_COUNTS 57 // ~5 deg past the recorded landmark
-#define STALL_LIMIT_COUNTS     10 // an increment that moved < this is a stall
-#define MAX_INCREMENTS         60 // 216 deg -- past 180 something is wrong
+#define STALL_LIMIT_COUNTS     6 // a 20-count increment that moved less than this
+#define OVERSHOOT_LIMIT_COUNTS 57
+#define MAX_INCREMENTS       130
 
 static const char *TAG = "motor_enc";
 
 static i2c_master_bus_handle_t s_bus;
 static i2c_master_dev_handle_t s_dev;
-
-// -- console input ------------------------------------------------------------
-
-static void console_input_init(void)
-{
-    // The console UART has no RX driver by default; install one so Enter
-    // from the monitor can be read. printf output is routed through the same
-    // driver so the two paths don't interleave on the FIFO.
-    uart_driver_install(UART_NUM_0, 256, 0, 0, NULL, 0);
-    uart_vfs_dev_use_driver(UART_NUM_0);
-}
-
-static void wait_enter(const char *prompt)
-{
-    printf("\n>>> %s -- then press ENTER\n", prompt);
-    fflush(stdout);
-    uart_flush_input(UART_NUM_0);
-    while (true) {
-        uint8_t c;
-        if (uart_read_bytes(UART_NUM_0, &c, 1, pdMS_TO_TICKS(100)) == 1 && (c == '\r' || c == '\n')) {
-            return;
-        }
-    }
-}
 
 // -- encoder ------------------------------------------------------------------
 
@@ -107,28 +83,23 @@ static bool encoder_read(uint16_t *raw)
     return true;
 }
 
-// Average a few samples so a landmark isn't one noisy reading.
 static uint16_t encoder_read_avg(void)
 {
-    int32_t acc = 0;
     uint16_t first = 0;
     encoder_read(&first);
+    int32_t acc = 0;
     for (int i = 0; i < 8; i++) {
         uint16_t r = 0;
         encoder_read(&r);
-        // accumulate relative to the first sample so a seam crossing
-        // inside the window doesn't wreck the mean
         int32_t d = (int32_t)r - (int32_t)first;
         if (d > AS5600_COUNTS / 2) d -= AS5600_COUNTS;
         if (d < -AS5600_COUNTS / 2) d += AS5600_COUNTS;
         acc += d;
-        vTaskDelay(pdMS_TO_TICKS(5));
+        vTaskDelay(pdMS_TO_TICKS(3));
     }
-    int32_t v = (int32_t)first + acc / 8;
-    return (uint16_t)((v + AS5600_COUNTS) % AS5600_COUNTS);
+    return (uint16_t)(((int32_t)first + acc / 8 + AS5600_COUNTS) % AS5600_COUNTS);
 }
 
-// Signed shortest difference on the 4096 circle.
 static int32_t enc_delta(uint16_t from, uint16_t to)
 {
     int32_t d = (int32_t)to - (int32_t)from;
@@ -137,12 +108,24 @@ static int32_t enc_delta(uint16_t from, uint16_t to)
     return d;
 }
 
-static double deg(int32_t counts)
+static double deg(double counts)
 {
     return counts * 360.0 / AS5600_COUNTS;
 }
 
-// -- stepper ------------------------------------------------------------------
+// -- driver -------------------------------------------------------------------
+
+static void report_drv_status(const char *when)
+{
+    uint32_t s = 0;
+    if (!tmc2208_read_register(TMC_REG_DRV_STATUS, &s)) {
+        return;
+    }
+    printf("  DRV_STATUS %-9s ola=%lu olb=%lu short=%lu ot=%lu otpw=%lu stst=%lu CS=%lu\n",
+           when, (unsigned long)((s >> 6) & 1), (unsigned long)((s >> 7) & 1),
+           (unsigned long)((s >> 2) & 0xF), (unsigned long)((s >> 1) & 1), (unsigned long)(s & 1),
+           (unsigned long)((s >> 31) & 1), (unsigned long)((s >> 16) & 0x1F));
+}
 
 static void stepper_init(void)
 {
@@ -157,20 +140,16 @@ static void stepper_init(void)
 
     tmc2208_uart_init(PIN_TMC_UART_TX, PIN_TMC_UART_RX, TMC_UART_BAUD);
     vTaskDelay(pdMS_TO_TICKS(50));
-
     tmc2208_write_register(TMC_REG_GCONF, 0xC0);
-    tmc2208_write_register(TMC_REG_CHOPCONF, 0x100101B5); // MRES=0 -> 1/256
+    tmc2208_write_register(TMC_REG_CHOPCONF, 0x100101B5);
     tmc2208_write_register(TMC_REG_IHOLD_IRUN,
-                           ((uint32_t)TMC_IHOLDDELAY << 16) |
-                           ((uint32_t)TMC_IRUN << 8) |
-                           (uint32_t)TMC_IHOLD);
+                           ((uint32_t)TMC_IHOLDDELAY << 16) | ((uint32_t)TMC_IRUN << 8) | (uint32_t)TMC_IHOLD);
 
-    uint32_t gconf = 0, chop = 0;
-    tmc2208_read_register(TMC_REG_GCONF, &gconf);
+    uint32_t chop = 0;
     tmc2208_read_register(TMC_REG_CHOPCONF, &chop);
-    ESP_LOGI(TAG, "TMC2208 GCONF=0x%02lX CHOPCONF=0x%08lX MRES=%lu -> 1/%d microsteps, IRUN=%d",
-             (unsigned long)gconf, (unsigned long)chop, (unsigned long)((chop >> 24) & 0xF),
-             256 >> ((chop >> 24) & 0xF), TMC_IRUN);
+    printf("  CHOPCONF=0x%08lX  MRES=%lu (1/%lu)  IRUN=%d  chopper=%s\n",
+           (unsigned long)chop, (unsigned long)((chop >> 24) & 0xF),
+           256ul >> ((chop >> 24) & 0xF), TMC_IRUN, "StealthChop");
 }
 
 static void step_pulses(int count)
@@ -186,147 +165,124 @@ static void step_pulses(int count)
 static void set_dir(int level)
 {
     gpio_set_level(PIN_TMC_DIR, level);
-    esp_rom_delay_us(20); // tDSU before the first STEP edge
+    esp_rom_delay_us(20);
 }
 
-// Walk toward `target` in increments, logging commanded vs measured, until
-// the encoder reaches it. `sign` is the encoder direction of travel (+1/-1).
-// Returns the number of increments taken, or -1 on a guard trip.
-static int sweep_to(const char *name, int dir_level, int sign, uint16_t target, uint16_t *pos)
+// One direction of the sweep. `sign` is the encoder direction of travel.
+// Prints one CSV-ish row per increment: cumulative commanded counts,
+// cumulative measured counts, the running error, and the raw encoder value
+// -- everything the fit on the PC side needs. Returns increments taken or
+// -1 on a guard.
+static int sweep(const char *name, int dir_level, int sign, int32_t span_counts, uint16_t *pos)
 {
     set_dir(dir_level);
-    printf("\n--- %s: DIR=%d, %d usteps per increment ---\n", name, dir_level, USTEPS_PER_INCREMENT);
-    printf("  inc   enc     d_meas   d_cmd   err    to_target\n");
+    printf("\n--- %s: DIR=%d, sign=%+d, %d usteps/inc, target %ld counts ---\n",
+           name, dir_level, sign, USTEPS_PER_INCREMENT, (long)span_counts);
+    printf("  n,cmd_cum,meas_cum,err,raw\n");
 
-    int32_t cmd_counts = (int32_t)(USTEPS_PER_INCREMENT * COUNTS_PER_USTEP + 0.5);
-    int32_t err_acc = 0;
+    double cmd_per_inc = USTEPS_PER_INCREMENT * COUNTS_PER_USTEP;
+    double cmd_cum = 0.0;
+    int32_t meas_cum = 0;
+    uint16_t start = *pos;
 
     for (int n = 1; n <= MAX_INCREMENTS; n++) {
         uint16_t before = *pos;
         step_pulses(USTEPS_PER_INCREMENT);
-        vTaskDelay(pdMS_TO_TICKS(30));
+        vTaskDelay(pdMS_TO_TICKS(SETTLE_MS));
         uint16_t after = 0;
         if (!encoder_read(&after)) {
             ESP_LOGE(TAG, "encoder read failed");
             return -1;
         }
-        int32_t d = enc_delta(before, after);
-        int32_t err = d * sign - cmd_counts; // measured minus commanded, in the travel direction
-        err_acc += err;
-        int32_t remaining = enc_delta(after, target) * sign;
-        printf("  %3d  %5u   %+6ld   %+6ld  %+4ld   %+6ld\n",
-               n, after, (long)d, (long)(cmd_counts * sign), (long)err, (long)remaining);
+        int32_t d = enc_delta(before, after) * sign; // positive = along travel
+        cmd_cum += cmd_per_inc;
+        meas_cum += d;
         *pos = after;
 
-        if (d * sign < STALL_LIMIT_COUNTS) {
-            ESP_LOGE(TAG, "STALL: commanded %ld counts, encoder moved %ld -- stopping", (long)cmd_counts, (long)d);
+        printf("  %d,%.2f,%ld,%+.2f,%u\n", n, cmd_cum, (long)meas_cum, meas_cum - cmd_cum, after);
+
+        if (d < STALL_LIMIT_COUNTS) {
+            ESP_LOGE(TAG, "STALL at inc %d: moved %ld counts for %.1f commanded", n, (long)d, cmd_per_inc);
             return -1;
         }
-        if (remaining < -OVERSHOOT_LIMIT_COUNTS) {
-            ESP_LOGE(TAG, "OVERSHOOT: %ld counts past target -- stopping", (long)-remaining);
+        if (meas_cum > span_counts + OVERSHOOT_LIMIT_COUNTS) {
+            ESP_LOGE(TAG, "OVERSHOOT at inc %d: %ld counts past target", n, (long)(meas_cum - span_counts));
             return -1;
         }
-        if (remaining <= cmd_counts / 2) {
-            printf("  reached target (accumulated error %+ld counts = %+.2f deg over %d increments)\n",
-                   (long)err_acc, deg(err_acc), n);
+        if (meas_cum >= span_counts) {
+            printf("  reached: %ld measured for %.1f commanded over %d increments (net error %+.1f counts = %+.2f deg)\n",
+                   (long)meas_cum, cmd_cum, n, meas_cum - cmd_cum, deg(meas_cum - cmd_cum));
             return n;
         }
+        if (n % 30 == 0) {
+            report_drv_status("mid");
+        }
     }
-    ESP_LOGE(TAG, "MAX_INCREMENTS hit without reaching target -- stopping");
+    (void)start;
+    ESP_LOGE(TAG, "MAX_INCREMENTS without reaching target");
     return -1;
 }
 
-// -- test ---------------------------------------------------------------------
-
 void test_motor_encoder(void)
 {
-    console_input_init();
     encoder_init();
     stepper_init();
 
-    printf("\n================ manual landmark mapping (driver OFF) ================\n");
+    ESP_LOGW(TAG, "beam attached, resting at 6. Driver engages in 3 s -- keep clear.");
+    vTaskDelay(pdMS_TO_TICKS(3000));
 
-    wait_enter("Let the beam rest at 6 o'clock (crank straight down)");
     uint16_t enc6 = encoder_read_avg();
-    printf("  enc6  = %4u\n", enc6);
+    printf("\n  enc6 (rest) = %u\n", enc6);
 
-    wait_enter("Lift the beam to LEVEL (crank at 9) and HOLD it");
-    uint16_t enc9 = encoder_read_avg();
-    int32_t d69 = enc_delta(enc6, enc9);
-    printf("  enc9  = %4u    6->9  = %+5ld counts = %+7.2f deg\n", enc9, (long)d69, deg(d69));
-
-    wait_enter("Move the beam on to 12 o'clock (crank straight up) and HOLD it");
-    uint16_t enc12 = encoder_read_avg();
-    int32_t d912 = enc_delta(enc9, enc12);
-    int32_t d612 = d69 + d912;
-    printf("  enc12 = %4u    9->12 = %+5ld counts = %+7.2f deg\n", enc12, (long)d912, deg(d912));
-
-    int sign = d612 > 0 ? 1 : -1;
-    printf("\n  trajectory 6 -> 12: %+ld counts = %+.2f deg  (expect ~180)\n", (long)d612, deg(d612));
-    printf("  encoder counts %s from 6 toward 12\n", sign > 0 ? "UP" : "DOWN");
-    if (d69 * d912 <= 0) {
-        ESP_LOGW(TAG, "6->9 and 9->12 have different signs -- landmarks look wrong, check and reset");
-    }
-
-    wait_enter("Let the beam back down to 6 and let go");
-    uint16_t pos = encoder_read_avg();
-    int32_t back = enc_delta(enc6, pos);
-    printf("  now at %4u  (%+.2f deg from enc6)\n", pos, deg(back));
-    if (back < -OVERSHOOT_LIMIT_COUNTS || back > OVERSHOOT_LIMIT_COUNTS) {
-        ESP_LOGE(TAG, "not back at 6 -- refusing to power the driver here. Reset and retry.");
-        while (true) vTaskDelay(pdMS_TO_TICKS(1000));
-    }
-
-    printf("\n================ powered sweep (driver ON at 6, zero load) ================\n");
     gpio_set_level(PIN_TMC_EN, 0);
     vTaskDelay(pdMS_TO_TICKS(300));
-    pos = encoder_read_avg();
-    printf("  driver ON, holding at %u\n", pos);
+    uint16_t pos = encoder_read_avg();
+    printf("  driver ON at %u (snap %+ld counts)\n", pos, (long)enc_delta(enc6, pos));
+    report_drv_status("idle");
 
-    // Probe: one full step with DIR=0, see which way the encoder goes.
+    // Probe one full step with DIR=0 to learn its encoder sign, then pick
+    // the DIR level that heads toward 12 (encoder decreasing, from the map).
     set_dir(0);
     uint16_t before = pos;
-    step_pulses(PROBE_USTEPS);
-    vTaskDelay(pdMS_TO_TICKS(50));
+    step_pulses(USTEPS_PER_INCREMENT);
+    vTaskDelay(pdMS_TO_TICKS(SETTLE_MS));
     encoder_read(&pos);
     int32_t probe = enc_delta(before, pos);
-    int dir_toward_12 = (probe * sign > 0) ? 0 : 1;
-    printf("  probe: DIR=0 x %d usteps -> %+ld counts  =>  DIR=%d goes toward 12, DIR=%d toward 6\n",
-           PROBE_USTEPS, (long)probe, dir_toward_12, 1 - dir_toward_12);
-    // undo the probe so the sweep starts from the recorded 6
+    int dir_to_12 = (probe < 0) ? 0 : 1;
+    printf("  probe DIR=0: %+ld counts  =>  DIR=%d toward 12 (encoder decreasing)\n", (long)probe, dir_to_12);
     set_dir(1 - 0);
-    step_pulses(PROBE_USTEPS);
-    vTaskDelay(pdMS_TO_TICKS(50));
+    step_pulses(USTEPS_PER_INCREMENT); // undo
+    vTaskDelay(pdMS_TO_TICKS(SETTLE_MS));
     encoder_read(&pos);
 
-    int n_up = sweep_to("6 -> 12", dir_toward_12, sign, enc12, &pos);
-    if (n_up > 0) {
-        vTaskDelay(pdMS_TO_TICKS(500));
-        int n_down = sweep_to("12 -> 6", 1 - dir_toward_12, -sign, enc6, &pos);
-        int32_t drift = enc_delta(enc6, pos);
-        printf("\n===== results =====\n");
-        printf("  up   : %d increments = %d usteps for %+.2f deg measured\n",
-               n_up, n_up * USTEPS_PER_INCREMENT, deg(d612));
-        if (n_down > 0) {
-            printf("  down : %d increments\n", n_down);
-        }
-        printf("  usteps per encoder count : %.3f measured, %.3f nominal\n",
-               n_up > 0 && d612 ? (double)(n_up * USTEPS_PER_INCREMENT) / (d612 * sign) : 0.0,
-               1.0 / COUNTS_PER_USTEP);
-        printf("  drift after round trip   : %+ld counts = %+.2f deg  (step loss if far from 0)\n",
-               (long)drift, deg(drift));
-        printf("  DIR=%d -> toward 12 -> ball toward p2 (45 cm)\n", dir_toward_12);
-        printf("  DIR=%d -> toward 6  -> ball toward p1 (0 cm)\n", 1 - dir_toward_12);
-        printf("====================\n");
-    } else {
-        ESP_LOGE(TAG, "sweep aborted -- see above. Leaving the driver ON so the beam doesn't drop.");
-        ESP_LOGE(TAG, "Support the beam, then reset.");
+    int32_t span = SPAN_6_TO_12_COUNTS - SWEEP_MARGIN_COUNTS;
+    int n_up = sweep("6 -> ~12", dir_to_12, -1, span, &pos);
+    if (n_up < 0) {
+        ESP_LOGE(TAG, "sweep aborted; driver stays ON. Support the beam, then reset.");
         while (true) vTaskDelay(pdMS_TO_TICKS(1000));
     }
+    report_drv_status("at top");
+    vTaskDelay(pdMS_TO_TICKS(500));
 
-    // Back at 6 the crank carries no load, so releasing here is safe.
+    int n_down = sweep("~12 -> 6", 1 - dir_to_12, +1, span, &pos);
+    if (n_down < 0) {
+        ESP_LOGE(TAG, "sweep aborted; driver stays ON. Support the beam, then reset.");
+        while (true) vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+    report_drv_status("at 6");
+
+    int32_t drift = enc_delta(enc6, pos);
+    printf("\n===== results =====\n");
+    printf("  up   : %d increments = %d usteps = %.1f deg commanded\n",
+           n_up, n_up * USTEPS_PER_INCREMENT, deg(n_up * USTEPS_PER_INCREMENT * COUNTS_PER_USTEP));
+    printf("  down : %d increments\n", n_down);
+    printf("  drift after round trip : %+ld counts = %+.2f deg\n", (long)drift, deg(drift));
+    printf("  DIR=%d -> toward 12 -> ball toward p2;  DIR=%d -> toward 6 -> ball toward p1\n",
+           dir_to_12, 1 - dir_to_12);
+    printf("====================\n");
+
     vTaskDelay(pdMS_TO_TICKS(500));
     gpio_set_level(PIN_TMC_EN, 1);
-    ESP_LOGI(TAG, "driver OFF at 6. Done -- reset to run again.");
+    ESP_LOGI(TAG, "driver OFF at 6. Done.");
     while (true) vTaskDelay(pdMS_TO_TICKS(1000));
 }
