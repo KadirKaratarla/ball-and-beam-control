@@ -18,7 +18,7 @@
 #define TEST_MOTOR_ENCODER 6 // Faz 3.3 / 3.4 first data
 #define TEST_MOTOR_FREE    7 // shaft free: 1 rev = 4096 counts?
 
-#define ACTIVE_TEST TEST_MOTOR_ENCODER
+#define ACTIVE_TEST TEST_MOTOR_FREE
 
 void app_main(void)
 {
