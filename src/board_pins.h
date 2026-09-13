@@ -16,7 +16,10 @@
 #define TMC_UART_BAUD 115200
 
 // --- AS5600 magnetic encoder (I2C) ---
-// DIR is strapped to GND on the board; OUT and GPO are left unconnected.
+// DIR is NOT strapped on this breakout despite an early reading suggesting
+// it was: left floating it picks up I2C line activity and the chip flips
+// polarity between reads, reporting the same angle alternately as x and
+// 4096-x. It needs its own wire to GND. OUT and GPO stay unconnected.
 #define PIN_AS5600_SDA GPIO_NUM_8
 #define PIN_AS5600_SCL GPIO_NUM_9
 
