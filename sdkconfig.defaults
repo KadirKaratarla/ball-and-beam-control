@@ -9,6 +9,11 @@ CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
 # away to nothing.
 CONFIG_FREERTOS_HZ=1000
 
+# Console stays on UART0 (the CH343 bridge). The built-in USB-Serial-JTAG
+# port is the binary data link to the PC, so the console must NOT be
+# mirrored there -- log lines would land in the middle of packets.
+CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
+
 CONFIG_SPIRAM=y
 CONFIG_SPIRAM_MODE_OCT=y
 CONFIG_SPIRAM_SPEED_80M=y
