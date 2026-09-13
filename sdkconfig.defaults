@@ -4,6 +4,11 @@
 CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
 CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
 
+# 1 kHz tick so vTaskDelay can express the millisecond-scale periods the
+# control loop works in; at the 100 Hz default anything under 10 ms rounds
+# away to nothing.
+CONFIG_FREERTOS_HZ=1000
+
 CONFIG_SPIRAM=y
 CONFIG_SPIRAM_MODE_OCT=y
 CONFIG_SPIRAM_SPEED_80M=y
