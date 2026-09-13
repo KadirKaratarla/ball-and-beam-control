@@ -100,9 +100,17 @@ class EchoReader(threading.Thread):
     def run(self):
         buf = bytearray()
         while self.running:
-            chunk = self.ser.read(64)
+            # Block for the first byte only, then sweep up whatever else is
+            # already waiting. read(n) with a timeout returns on the timeout
+            # when fewer than n bytes arrive, which for 4-byte echoes every
+            # 10 ms meant every call sat out the full timeout and the RTT
+            # figure was mostly that wait.
+            chunk = self.ser.read(1)
             if not chunk:
                 continue
+            waiting = self.ser.in_waiting
+            if waiting:
+                chunk += self.ser.read(waiting)
             buf += chunk
             while True:
                 i = buf.find(SYNC)
