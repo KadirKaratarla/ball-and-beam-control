@@ -199,6 +199,18 @@ void test_motor_encoder(void)
     ESP_LOGI(TAG, "level = %u, rest->level = %ld counts = %.2f deg (crank 6->9 should be ~90 deg / 1024 counts)",
              level, (long)rest_to_level, counts_to_deg(rest_to_level));
 
+    // Guard: if the beam wasn't lifted the crank is still near 6 o'clock,
+    // and the excursion below would try to push it past bottom dead centre.
+    if (rest_to_level > -512 && rest_to_level < 512) {
+        ESP_LOGE(TAG, "rest->level is only %.1f deg -- the beam was not lifted to level. "
+                      "Aborting before moving; driver off. Reset and try again.",
+                 counts_to_deg(rest_to_level));
+        gpio_set_level(PIN_TMC_EN, 1);
+        while (true) {
+            vTaskDelay(pdMS_TO_TICKS(1000));
+        }
+    }
+
     // Phase 2: +18, -36, +18 degrees around level.
     uint16_t pos = level;
     int32_t leg_fwd  = run_leg("leg A forward",  0, &pos);
