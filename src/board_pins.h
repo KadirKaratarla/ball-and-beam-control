@@ -30,3 +30,15 @@
 // 1k/2k divider (5V -> 3.33V). TRIG takes our 3.3V drive directly.
 #define PIN_HCSR04_TRIG GPIO_NUM_10
 #define PIN_HCSR04_ECHO GPIO_NUM_11
+
+// --- Control loop timing probe ---
+// Toggled in the loop timer ISR so a logic analyser can read the period
+// and jitter independently of the software measurement.
+#define PIN_LOOP_PROBE GPIO_NUM_16
+
+// --- Control loop period ---
+// 4 ms (250 Hz). Started at 2 ms in the plan; relaxed to 4 ms so every
+// per-cycle budget (encoder read, PID, step update) halves in relative cost.
+// The camera delivers position at 100 Hz, so each update still gets 2.5
+// loop cycles.
+#define CONTROL_LOOP_PERIOD_US 4000
