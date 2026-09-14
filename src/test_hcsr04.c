@@ -1,3 +1,4 @@
+#ifdef BB_TESTS // Faz 1 bring-up test: built only in the `tests` environment
 #include "test_hcsr04.h"
 
 #include <math.h>
@@ -208,3 +209,4 @@ void test_hcsr04(void)
         }
     }
 }
+#endif // BB_TESTS
