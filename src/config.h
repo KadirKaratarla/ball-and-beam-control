@@ -39,7 +39,9 @@
 #define ENC_DIR_FAULT_TOL 24
 
 #define ENC_I2C_HZ 400000     // 222 us per read (K-011)
-#define ENC_I2C_TIMEOUT_MS 2
+// A failed read costs the full timeout inside the control task; 1 ms is
+// 4x the read time and keeps one bad tick under a quarter of the period.
+#define ENC_I2C_TIMEOUT_MS 1
 
 // ---------------------------------------------------------------------------
 // Stepper (K-007, K-009, K-020)

@@ -60,6 +60,11 @@ esp_err_t encoder_init(void)
     };
     ESP_RETURN_ON_ERROR(i2c_master_bus_add_device(s_bus, &dev_cfg, &s_dev), TAG, "device");
 
+    // The driver logs two ESP_LOGE lines from the calling task on every
+    // failed transaction -- from the control task that is ~14 ms per tick
+    // (K-022). Failures are counted in i2c_errors instead.
+    esp_log_level_set("i2c.master", ESP_LOG_NONE);
+
     s_pos_at_6 = encoder_correct(ENC_RAW_AT_6);
 
     uint16_t raw;

@@ -110,6 +110,9 @@ static void control_task(void *arg)
     while (true) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         int64_t t0 = esp_timer_get_time();
+        // Copy now: if this tick runs late the ISR overwrites s_isr_us
+        // mid-tick and the latency would come out negative.
+        int64_t isr_us = s_isr_us;
         wakes++;
         tick++;
 
@@ -178,7 +181,7 @@ static void control_task(void *arg)
         acc(&st.calc_us_sum, &st.calc_us_max, (uint32_t)(t2 - t1));
         acc(&st.step_us_sum, &st.step_us_max, (uint32_t)(t3 - t2));
         acc(&st.total_us_sum, &st.total_us_max, (uint32_t)(t3 - t0));
-        acc(&st.lat_us_sum, &st.lat_us_max, (uint32_t)(t0 - s_isr_us));
+        acc(&st.lat_us_sum, &st.lat_us_max, t0 > isr_us ? (uint32_t)(t0 - isr_us) : 0);
         if (t3 - t0 > CONTROL_LOOP_PERIOD_US) st.overruns++;
         st.ticks++;
 
