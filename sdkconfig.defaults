@@ -1,0 +1,19 @@
+# ESP32-S3-N16R8: 16MB Quad SPI flash + 8MB Octal-mode PSRAM.
+# Only takes effect on a fresh sdkconfig generation (deleted the stale
+# sdkconfig.esp32-s3-devkitc-1 that was created for the wrong N8 default).
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
+
+# 1 kHz tick so vTaskDelay can express the millisecond-scale periods the
+# control loop works in; at the 100 Hz default anything under 10 ms rounds
+# away to nothing.
+CONFIG_FREERTOS_HZ=1000
+
+# Console stays on UART0 (the CH343 bridge). The built-in USB-Serial-JTAG
+# port is the binary data link to the PC, so the console must NOT be
+# mirrored there -- log lines would land in the middle of packets.
+CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
+
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
