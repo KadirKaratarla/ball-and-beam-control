@@ -1,3 +1,4 @@
+#ifdef BB_TESTS // Faz 1 bring-up test: built only in the `tests` environment
 #include "test_timer_jitter.h"
 
 #include <string.h>
@@ -210,3 +211,4 @@ void test_timer_jitter(void)
         vTaskDelay(pdMS_TO_TICKS(10000));
     }
 }
+#endif // BB_TESTS

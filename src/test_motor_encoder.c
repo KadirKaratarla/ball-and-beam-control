@@ -1,3 +1,4 @@
+#ifdef BB_TESTS // Faz 1 bring-up test: built only in the `tests` environment
 #include "test_motor_encoder.h"
 
 #include "freertos/FreeRTOS.h"
@@ -286,3 +287,4 @@ void test_motor_encoder(void)
     ESP_LOGI(TAG, "driver OFF at 6. Done.");
     while (true) vTaskDelay(pdMS_TO_TICKS(1000));
 }
+#endif // BB_TESTS

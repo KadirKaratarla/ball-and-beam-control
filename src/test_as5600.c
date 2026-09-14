@@ -1,3 +1,4 @@
+#ifdef BB_TESTS // Faz 1 bring-up test: built only in the `tests` environment
 #include "test_as5600.h"
 
 #include "freertos/FreeRTOS.h"
@@ -319,3 +320,4 @@ void test_as5600(void)
         vTaskDelay(pdMS_TO_TICKS(READOUT_PERIOD_MS));
     }
 }
+#endif // BB_TESTS

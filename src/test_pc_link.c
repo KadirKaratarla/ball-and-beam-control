@@ -1,3 +1,4 @@
+#ifdef BB_TESTS // Faz 1 bring-up test: built only in the `tests` environment
 #include "test_pc_link.h"
 
 #include "freertos/FreeRTOS.h"
@@ -64,3 +65,4 @@ void test_pc_link(void)
         vTaskDelay(pdMS_TO_TICKS(POLL_PERIOD_MS));
     }
 }
+#endif // BB_TESTS

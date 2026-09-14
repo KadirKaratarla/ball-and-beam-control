@@ -1,3 +1,4 @@
+#ifdef BB_TESTS // Faz 1 bring-up test: built only in the `tests` environment
 #include "test_tmc_bringup.h"
 
 #include "freertos/FreeRTOS.h"
@@ -150,3 +151,4 @@ void test_tmc_bringup(void)
     gpio_set_level(PIN_TMC_EN, 1); // disable when done
     ESP_LOGI(TAG, "Test complete.");
 }
+#endif // BB_TESTS
