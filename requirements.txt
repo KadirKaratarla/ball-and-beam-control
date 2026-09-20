@@ -13,3 +13,7 @@ h5py
 
 # PC -> ESP32 position link over USB-Serial-JTAG
 pyserial==3.5
+
+# Faz 5 GUI
+PySide6==6.11.2
+pyqtgraph==0.14.0

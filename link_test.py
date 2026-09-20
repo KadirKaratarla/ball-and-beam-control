@@ -53,7 +53,8 @@ def main():
     if cfg:
         print(f"CONFIG v{cfg.version}: Kp {cfg.kp:.2f} Ki {cfg.ki:.2f} Kd {cfg.kd:.2f} d_tau {cfg.d_tau_s:.2f} "
               f"theta_max {cfg.theta_max_deg:.1f} setpoint {cfg.x_set_0p1mm / 100:.1f} cm vmax {cfg.vmax:.0f} "
-              f"level {cfg.level_counts} IRUN {cfg.irun} IHOLD {cfg.ihold} defaults={cfg.defaults}")
+              f"level {cfg.level_counts} IRUN {cfg.irun} IHOLD {cfg.ihold} defaults={cfg.defaults} "
+              f"(compiled Kp {cfg.kp_def:.2f} Ki {cfg.ki_def:.2f} Kd {cfg.kd_def:.2f})")
     else:
         print("no CONFIG received")
 

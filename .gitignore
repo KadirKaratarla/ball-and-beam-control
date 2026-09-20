@@ -8,3 +8,4 @@ __pycache__/
 # so a committed copy would only invite reuse of a stale one.
 calibration.json
 hsv_config.json
+logs/

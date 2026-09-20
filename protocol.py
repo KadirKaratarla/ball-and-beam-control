@@ -48,9 +48,9 @@ Health = namedtuple("Health", "ticks loop_us_mean loop_us_max overruns missed en
 ACK_FMT = "<BBI"
 Ack = namedtuple("Ack", "cmd_type result nonce")
 
-CONFIG_FMT = "<HfffffhffhBBB"
+CONFIG_FMT = "<HfffffhffhBBBffff"
 Config = namedtuple("Config", "version kp ki kd d_tau_s theta_max_deg x_set_0p1mm vmax amax "
-                              "level_counts irun ihold defaults")
+                              "level_counts irun ihold defaults kp_def ki_def kd_def d_tau_def")
 
 DECODERS = {
     T_TELEM: (TELEM_FMT, Telem),
