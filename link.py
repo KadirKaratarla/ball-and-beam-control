@@ -190,6 +190,8 @@ def main():
     parser.add_argument("--scale", type=int, default=2)
     parser.add_argument("--skip-calibration", action="store_true", help="DEV ONLY")
     parser.add_argument("--calibration", default=None)
+    parser.add_argument("--log", default=None,
+                        help="CSV of every packet sent: t_s, seq, pos_cm, valid, warning (tuning)")
     args = parser.parse_args()
 
     if args.calibration is None:
@@ -221,6 +223,10 @@ def main():
     mode = "synthetic triangle wave" if args.synthetic else "camera tracker"
     print(f"sending {mode} at {SEND_HZ} Hz  (ctrl-c to stop)\n")
 
+    log = open(args.log, "w") if args.log else None
+    if log:
+        log.write("t_s,seq,pos_cm,valid,warning\n")
+
     seq = 0
     sent = 0
     period = 1.0 / SEND_HZ
@@ -251,6 +257,8 @@ def main():
             t_send = time.perf_counter()
             ser.write(pkt)
             reader.sent(seq, t_send)
+            if log:
+                log.write(f"{t_send:.4f},{seq},{pos_cm:.3f},{int(valid)},{int(warning)}\n")
             seq = (seq + 1) & 0xFF
             sent += 1
 
@@ -262,6 +270,8 @@ def main():
     finally:
         reader.running = False
         ser.close()
+        if log:
+            log.close()
         print("\n" + reader.report(sent))
 
 
