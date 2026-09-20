@@ -3,7 +3,7 @@
 import time
 
 from PySide6.QtCore import Qt, QTimer, Slot
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QImage, QPixmap
 from PySide6.QtWidgets import (QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QGridLayout, QSlider,
                                QDoubleSpinBox, QPushButton, QGroupBox, QFrame, QSizePolicy)
 
@@ -70,6 +70,14 @@ class MainWindow(QMainWindow):
         self.beam = BeamView(beam_cm)
         self.beam.setpoint_clicked.connect(self.send_setpoint)
         left.addWidget(self.beam)
+
+        # camera view (hidden until the button is on)
+        self.cam_view = QLabel()
+        self.cam_view.setAlignment(Qt.AlignCenter)
+        self.cam_view.setMinimumHeight(240)
+        self.cam_view.setStyleSheet("background:#222;")
+        self.cam_view.hide()
+        left.addWidget(self.cam_view)
 
         # setpoint
         sp_box = QGroupBox("Setpoint (cm)")
@@ -142,7 +150,7 @@ class MainWindow(QMainWindow):
         self.btn_view = QPushButton("Kamera görüntüsü")
         self.btn_view.setCheckable(True)
         self.btn_view.setToolTip("Takip penceresini aç/kapat (bant, tespit, konum)")
-        self.btn_view.toggled.connect(lambda on: self.camera.set_view(on))
+        self.btn_view.toggled.connect(self.toggle_view)
         self.btn_center = QPushButton("Grafikleri ortala")
         self.btn_center.setToolTip("Grafikleri canlı pencereye ve varsayılan ölçeğe döndür")
         self.btn_center.clicked.connect(lambda: self.plots.recenter())
@@ -166,6 +174,7 @@ class MainWindow(QMainWindow):
         # --- camera/link process signals ---
         self.camera.status.connect(self.on_camera_status)
         self.camera.position.connect(self.on_position)
+        self.camera.image.connect(self.on_image)
         self.cam_status = "başlatılıyor"
 
         # --- timers ---
@@ -207,6 +216,21 @@ class MainWindow(QMainWindow):
 
     def send_mode(self, mode):
         self.link.set_mode(mode)
+
+    def toggle_view(self, on):
+        self.camera.set_view(on)
+        self.cam_view.setVisible(on)
+        if not on:
+            self.cam_view.clear()
+
+    @Slot(bytes)
+    def on_image(self, jpeg):
+        if not self.cam_view.isVisible():
+            return
+        img = QImage.fromData(jpeg, "JPG")
+        if not img.isNull():
+            self.cam_view.setPixmap(QPixmap.fromImage(img).scaled(
+                self.cam_view.width(), max(240, self.cam_view.height()), Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
     def toggle_record(self, on):
         if on:

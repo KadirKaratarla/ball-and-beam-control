@@ -8,11 +8,12 @@ the GUI process only ever touches queues.
 
 Child -> GUI (out_q):  ("status", text) | ("event", kind, port)
                        ("batch", pos_tuple_or_None, [(ptype, msg), ...], stats_dict, frames)
+                       ("image", jpeg_bytes)   every 4th frame while the view is on
 GUI -> child (cmd_q):  ("setpoint", cm) | ("gains", kp, ki, kd, tau) | ("mode", m)
                        ("ping",) | ("config",) | ("view", on) | ("stop",)
-The camera view ("tracker" OpenCV window with the band, the detected
-centroid and the position) is drawn in this process, every 3rd frame,
-only while the GUI has it switched on.
+The camera view (band, detected centroid, position) is drawn here with
+tracker.render_view, JPEG-encoded and shipped to the GUI only while the
+GUI has it switched on; the GUI shows it inside its own window.
 """
 
 import multiprocessing as mp
@@ -32,7 +33,6 @@ def _run(cmd_q, out_q, opts):
     frames = 0
     running = True
     view_on = False
-    view_shown = False
 
     def handle_cmds():
         nonlocal running, view_on
@@ -112,15 +112,11 @@ def _run(cmd_q, out_q, opts):
                     warning = tr.health.warning()
                     emit((reading.pos_cm if reading.valid else 0.0, reading.valid, warning is not None))
                     n += 1
-                    if view_on:
-                        if n % 3 == 0:
-                            trk.draw_view(frame, tr, centroid, reading, warning, opts.get("scale", 2))
-                            cv2.waitKey(1)
-                            view_shown = True
-                    elif view_shown:
-                        cv2.destroyWindow("tracker")
-                        cv2.waitKey(1)
-                        view_shown = False
+                    if view_on and n % 4 == 0:
+                        view = trk.render_view(frame, tr, centroid, reading, warning, 2)
+                        ok, buf = cv2.imencode(".jpg", view, [cv2.IMWRITE_JPEG_QUALITY, 80])
+                        if ok:
+                            out_q.put(("image", buf.tobytes()))
             finally:
                 cam.end()
     except Exception as e:
@@ -135,6 +131,7 @@ class LinkProxy(QObject):
 
     status = Signal(str)
     position = Signal(float, bool, bool, float)
+    image = Signal(bytes)  # JPEG of the tracker view
 
     def __init__(self, opts):
         super().__init__()
@@ -174,6 +171,8 @@ class LinkProxy(QObject):
             elif kind == "event":
                 self.events.append((m[1], m[2]))
                 self.status.emit(f"ESP32 {m[1]} ({m[2]})")
+            elif kind == "image":
+                self.image.emit(m[1])
             elif kind == "batch":
                 pos, frames, stats, nframes = m[1], m[2], m[3], m[4]
                 self.connected = stats.pop("connected")

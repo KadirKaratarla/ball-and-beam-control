@@ -130,7 +130,8 @@ def apply_calibration_to_camera(cam, calib_dict):
     calibrate.set_gain(cam, calib_dict["gain"])
 
 
-def draw_view(frame_rgb, tracker, centroid, reading, warning, scale):
+def render_view(frame_rgb, tracker, centroid, reading, warning, scale):
+    """The annotated tracker view as a BGR image (band, centroid, position)."""
     view = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
     view = cv2.resize(view, None, fx=scale, fy=scale, interpolation=cv2.INTER_NEAREST)
     poly = (tracker.calib.band_polygon() * scale).astype(np.int32)
@@ -146,7 +147,11 @@ def draw_view(frame_rgb, tracker, centroid, reading, warning, scale):
     cv2.putText(view, label, (8, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.55, colour, 1, cv2.LINE_AA)
     if warning:
         cv2.putText(view, warning, (8, 42), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 255), 1, cv2.LINE_AA)
-    cv2.imshow("tracker", view)
+    return view
+
+
+def draw_view(frame_rgb, tracker, centroid, reading, warning, scale):
+    cv2.imshow("tracker", render_view(frame_rgb, tracker, centroid, reading, warning, scale))
 
 
 def main():
