@@ -18,8 +18,9 @@ static const char *state_name(uint8_t s)
 {
     switch (s) {
     case CTRL_STATE_WAIT: return "WAIT";
+    case CTRL_STATE_ENGAGE: return "ENGAGE";
+    case CTRL_STATE_LEVEL_HOLD: return "LEVEL";
     case CTRL_STATE_RUN: return "RUN";
-    case CTRL_STATE_HOLD: return "HOLD";
     case CTRL_STATE_FAULT: return "FAULT";
     default: return "?";
     }
@@ -40,10 +41,10 @@ static const char *fault_name(uint8_t f)
 
 static void print_sample(const telem_sample_t *s)
 {
-    printf("S,%lu,%u,%.1f,%d,%d,%d,%d,%.0f,%.1f,%.1f,%u,%s\n",
-           (unsigned long)s->t_ms, s->enc_raw, s->enc_pos, s->enc_ok,
-           s->pos_0p1mm, s->pos_valid, s->link_stale,
-           s->cmd_vel, s->cmd_pos, s->follow_err, s->loop_us, state_name(s->state));
+    printf("S,%lu,%.2f,%.1f,%d,%+.2f,%+.2f,%+.2f,%+.2f,%+.1f,%.1f,%+.1f,%+.1f,%.0f,%u,%u,%s\n",
+           (unsigned long)s->t_ms, s->x_cm, s->x_set_cm, s->ball_valid,
+           s->p, s->i, s->d, s->theta_cmd, s->phi_cmd, s->enc_pos, s->follow_err, s->lag_comp,
+           s->cmd_vel, s->link_age_ms, s->loop_us, state_name(s->state));
 }
 
 static void print_stats(const telem_stats_t *st)
@@ -83,7 +84,7 @@ void telemetry_init(void)
 {
     s_queue = xQueueCreate(TELEM_QUEUE_LEN, sizeof(telem_msg_t));
     xTaskCreatePinnedToCore(telemetry_task, "telem", 4096, NULL, TASK_TELEM_PRIO, NULL, TASK_AUX_CORE);
-    ESP_LOGI(TAG, "S rows: t_ms,enc_raw,enc_pos,enc_ok,pos_0p1mm,pos_valid,stale,cmd_vel,cmd_pos,follow_err,loop_us,state");
+    ESP_LOGI(TAG, "S rows: t_ms,x_cm,x_set,ball,P,I,D,theta_cmd,phi_cmd,enc_pos,follow_err,lag_comp,cmd_vel,link_age_ms,loop_us,state");
 }
 
 bool telemetry_push(const telem_msg_t *msg)

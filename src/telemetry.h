@@ -8,10 +8,11 @@
 #include <stdbool.h>
 
 typedef enum {
-    CTRL_STATE_WAIT = 0,  // start delay, driver off
-    CTRL_STATE_RUN = 1,   // open-loop profile running
-    CTRL_STATE_HOLD = 2,  // stopped by a stale link, resumes when it returns
-    CTRL_STATE_FAULT = 3, // latched, driver off
+    CTRL_STATE_WAIT = 0,       // start delay, driver off
+    CTRL_STATE_ENGAGE = 1,     // driver on, crank moving from 6 to level
+    CTRL_STATE_LEVEL_HOLD = 2, // beam held level: no ball / link stale
+    CTRL_STATE_RUN = 3,        // closed loop on the ball position
+    CTRL_STATE_FAULT = 4,      // latched, driver off
 } ctrl_state_t;
 
 typedef enum {
@@ -23,18 +24,19 @@ typedef enum {
     FAULT_TMC_UART,    // driver stopped answering
 } fault_t;
 
-// 10 Hz row
+// 10 Hz row (Faz 3.6 format; becomes the Faz 4 telemetry packet)
 typedef struct {
     uint32_t t_ms;
-    uint16_t enc_raw;
-    float enc_pos;    // counts from 6, + toward 12
-    uint8_t enc_ok;
-    int16_t pos_0p1mm;
-    uint8_t pos_valid;
-    uint8_t link_stale;
-    float cmd_vel;    // usteps/s
-    float cmd_pos;    // counts from 6, from the pulse counter
-    float follow_err; // cmd_pos - enc_pos
+    float x_cm, x_set_cm; // ball position and setpoint
+    uint8_t ball_valid;
+    float p, i, d;        // controller terms, deg
+    float theta_cmd;      // beam angle command, deg
+    float phi_cmd;        // crank angle command, deg from level
+    float enc_pos;        // measured shaft, counts from 6
+    float follow_err;     // commanded - measured shaft, counts
+    float lag_comp;       // encoder correction added to the command, counts
+    float cmd_vel;        // usteps/s
+    uint16_t link_age_ms; // age of the last valid packet
     uint16_t loop_us;
     uint8_t state;
 } telem_sample_t;

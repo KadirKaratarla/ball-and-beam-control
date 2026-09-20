@@ -26,10 +26,20 @@ bool stepper_configure_tmc(void);
 void stepper_enable(bool on);
 bool stepper_is_enabled(void);
 
+// Velocity/acceleration limits used by stepper_tick / stepper_track.
+// Defaults to STEP_VMAX / STEP_AMAX; the closed loop needs much more
+// (see STEP_VMAX_CLOSED_LOOP), validated by test_jog before use.
+void stepper_set_limits(float vmax_usteps_per_s, float amax_usteps_per_s2);
+
 // One tick: move the actual velocity toward `target_usteps_per_s` under
 // the acceleration limit and program the pulse generator. Positive is
 // toward 12. Returns the velocity now being generated.
 float stepper_tick(float target_usteps_per_s);
+
+// One tick of position tracking: full speed toward `target_usteps`, then
+// the sqrt deceleration that lands there under the acceleration limit.
+// Returns the velocity now being generated. Arrived when it returns 0.
+float stepper_track(int32_t target_usteps);
 
 // Immediately stops pulses and zeroes the velocity (no ramp). For faults.
 void stepper_halt(void);

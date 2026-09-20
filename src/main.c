@@ -13,6 +13,8 @@
 #include "test_motor_encoder.h"
 #include "test_motor_free.h"
 #include "test_timer_jitter.h"
+#include "test_pid_sim.h"
+#include "test_jog.h"
 
 #define TEST_TMC_BRINGUP   1
 #define TEST_TIMER_JITTER  2 // Faz 1.1
@@ -21,8 +23,10 @@
 #define TEST_PC_LINK       5 // Faz D
 #define TEST_MOTOR_ENCODER 6 // Faz 3.3 / 3.4 first data
 #define TEST_MOTOR_FREE    7 // shaft free: 1 rev = 4096 counts?
+#define TEST_PID_SIM       8 // Faz 3.1, nothing connected
+#define TEST_JOG           9 // Faz 3.3, interactive: level offset + speed sweep
 
-#define ACTIVE_TEST TEST_TIMER_JITTER
+#define ACTIVE_TEST TEST_JOG
 
 void app_main(void)
 {
@@ -40,13 +44,17 @@ void app_main(void)
     test_motor_encoder();
 #elif ACTIVE_TEST == TEST_MOTOR_FREE
     test_motor_free();
+#elif ACTIVE_TEST == TEST_PID_SIM
+    test_pid_sim();
+#elif ACTIVE_TEST == TEST_JOG
+    test_jog();
 #else
 #error "ACTIVE_TEST selects a test that has not been implemented yet"
 #endif
 }
 
 #else
-// Faz 2 -- the real application: timing skeleton with open-loop motion.
+// The application: 4 ms loop, PID on the camera ball position (Faz 3).
 
 #include "config.h"
 #include "encoder.h"
@@ -68,8 +76,9 @@ static void halt(const char *why)
 
 void app_main(void)
 {
-    ESP_LOGI(TAG, "ball_beam Faz 2: %d us loop, open-loop triangle 6 -> +%d counts -> 6",
-             CONTROL_LOOP_PERIOD_US, MOTION_TRAVEL_COUNTS);
+    ESP_LOGI(TAG, "ball_beam Faz 3: %d us loop, PID on the camera position, setpoint %.1f cm, "
+             "Kp %.2f Ki %.2f Kd %.2f, theta max %.1f deg, level %d counts",
+             CONTROL_LOOP_PERIOD_US, BALL_SETPOINT_CM, PID_KP, PID_KI, PID_KD, BEAM_THETA_MAX_DEG, ENC_LEVEL_COUNTS);
 
     telemetry_init();
 
