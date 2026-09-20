@@ -67,6 +67,44 @@
 #define STEP_TMC_CHOPCONF 0x100101B5u // MRES=0 (1/256), intpol, TBL=2, HSTRT=4, TOFF=5
 
 // ---------------------------------------------------------------------------
+// Linkage geometry (mm) -- from the reference STLs (IVProjects) and the
+// user's measurement, 2026-09-20. Side view, origin at the motor shaft,
+// x toward the hinge tower, y up. At beam level the crank points at 9
+// o'clock (away from the hinge tower), the rod is vertical and the pivot
+// sits exactly one rod length above the shaft (150 - 60 = 90 mm).
+// ---------------------------------------------------------------------------
+#define LINK_CRANK_R_MM 31.0f    // shaft bore to pin, Crank.STL
+#define LINK_ROD_L_MM 90.0f      // bearing seat to bearing seat, Coupler.STL
+#define LINK_BEAM_D_MM 477.0f    // hinge pin to beam-end pin, measured
+#define LINK_PIVOT_DY_MM 90.0f   // pivot height above the shaft
+// Pivot x: beam-end pin is directly above the 9 o'clock crank pin (x = -r).
+#define LINK_PIVOT_DX_MM (LINK_BEAM_D_MM - LINK_CRANK_R_MM)
+
+// Encoder counts (from 6) at which the beam is level. Nominal 90 deg from
+// 6 = 1024; K-021 put it near 87 deg. MUST be measured with the jog test
+// before closed loop -- until then this is a placeholder.
+#define ENC_LEVEL_COUNTS 1024
+
+// Beam angle limit. The 90 mm rod tilts as the pin swings, so the exact
+// curve is asymmetric: theta(-90) = -4.33, theta(+90) = +3.09 with a peak
+// of +3.26 at phi = +75 (test_pid_sim table). Past the peak the gain
+// reverses, so stay well inside: 3.0 deg <-> crank about +57 / -52 deg.
+#define BEAM_THETA_MAX_DEG 3.0f
+
+// ---------------------------------------------------------------------------
+// Ball controller (Faz 3). Plant: x'' = (5/7) g sin(theta) ~ 700 theta cm/s^2
+// (theta in rad). PD for wn = 3 rad/s, zeta = 0.7: Kp = wn^2/700,
+// Kd = 2 zeta wn / 700, converted to deg/cm. Starting point for 3.5.
+// ---------------------------------------------------------------------------
+#define BALL_SETPOINT_CM 22.5f   // beam centre (camera axis 0..45 cm)
+#define PID_KP 0.74f             // deg per cm
+#define PID_KI 0.0f              // deg per cm*s
+#define PID_KD 0.34f             // deg per cm/s
+#define PID_I_MAX_DEG 1.5f       // integral contribution clamp
+#define PID_D_TAU_S 0.06f        // derivative low-pass (camera noise)
+#define PID_DT_NOMINAL_S 0.01f   // camera frame period; the loop runs the PID per frame
+
+// ---------------------------------------------------------------------------
 // Faz 2 open-loop motion: slow triangle 6 -> +MOTION_TRAVEL_COUNTS -> 6
 // ---------------------------------------------------------------------------
 #define MOTION_TRAVEL_COUNTS 1000 // ~88 deg, just past level (level ~ 87 deg, K-021)
