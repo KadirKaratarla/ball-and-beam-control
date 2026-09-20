@@ -21,9 +21,11 @@
 // as counts from 6, positive toward 12, so 12 o'clock is about +2048.
 #define ENC_SIGN_TOWARD_12 (-1)
 
-// Startup sanity: the beam must be resting at 6 (driver off) within this
-// window, else the firmware refuses to power the driver (K-019).
-#define ENC_START_WINDOW_COUNTS 150
+// Startup sanity: the beam must be resting near 6 (driver off) within this
+// window, else the firmware refuses to power the driver (K-019). Friction
+// leaves the crank anywhere up to ~20 deg off 6; 400 counts = 35 deg still
+// means a third of the level-position torque at engage.
+#define ENC_START_WINDOW_COUNTS 400
 
 // Plausibility filter: the largest shaft movement one 4 ms tick can
 // legitimately show. 64 counts/4 ms = 5.6 deg/4 ms = 234 rpm, far above
@@ -111,11 +113,23 @@
 #define PID_DT_NOMINAL_S 0.01f   // camera frame period; the loop runs the PID per frame
 
 // ---------------------------------------------------------------------------
-// Faz 2 open-loop motion: slow triangle 6 -> +MOTION_TRAVEL_COUNTS -> 6
+// Start-up motion
 // ---------------------------------------------------------------------------
-#define MOTION_TRAVEL_COUNTS 1000 // ~88 deg, just past level (level ~ 87 deg, K-021)
-#define MOTION_DWELL_MS 1000
 #define MOTION_START_DELAY_MS 3000 // "keep clear" warning before the driver engages
+// 6 -> level (1101 counts, 97 deg) at a moderate speed, not the closed-loop one.
+#define STEP_VMAX_ENGAGE 10000.0f
+#define STEP_AMAX_ENGAGE 100000.0f
+// Hard clamp on the crank command around level, whatever the linkage says
+// (theta max 3.0 deg is ~650 counts; the +theta peak is at ~850).
+#define CRANK_CMD_MAX_COUNTS 650
+// After the driver energises the rotor snaps to a pole; the shaft
+// reference is taken after this settle time.
+#define ENGAGE_SETTLE_MS 200
+// Encoder correction of the crank command: integrates (target - measured)
+// with this time constant, bounded. Cancels the load-dependent rotor lag
+// (+4..+40 counts seen) so the beam angle is what the PID asked for.
+#define LAG_COMP_TAU_S 0.3f
+#define LAG_COMP_MAX_COUNTS 60.0f
 
 // ---------------------------------------------------------------------------
 // Guards -- any of these trips a latched fault: pulses off, driver disabled
@@ -128,10 +142,9 @@
 #define GUARD_FOLLOW_ERR_COUNTS 150
 // Consecutive ticks the encoder may fail (I2C error or reject) before fault.
 #define GUARD_ENC_BAD_TICKS 25 // 100 ms
-// PC link older than PC_LINK_STALE_US stops motion (ramps to zero, holds).
-// The position is not used in Faz 2, but the fail-safe path is exercised
-// from day one. Run gui/link.py (--synthetic is enough) to keep it live.
-#define GUARD_LINK_STALE_STOPS 1
+// No valid ball position for this long (link stale or ball not seen)
+// -> LEVEL_HOLD: beam level, controller reset, resumes when it returns.
+#define GUARD_BALL_LOST_MS 200
 
 // ---------------------------------------------------------------------------
 // Telemetry

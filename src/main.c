@@ -54,7 +54,7 @@ void app_main(void)
 }
 
 #else
-// Faz 2 -- the real application: timing skeleton with open-loop motion.
+// The application: 4 ms loop, PID on the camera ball position (Faz 3).
 
 #include "config.h"
 #include "encoder.h"
@@ -76,8 +76,9 @@ static void halt(const char *why)
 
 void app_main(void)
 {
-    ESP_LOGI(TAG, "ball_beam Faz 2: %d us loop, open-loop triangle 6 -> +%d counts -> 6",
-             CONTROL_LOOP_PERIOD_US, MOTION_TRAVEL_COUNTS);
+    ESP_LOGI(TAG, "ball_beam Faz 3: %d us loop, PID on the camera position, setpoint %.1f cm, "
+             "Kp %.2f Ki %.2f Kd %.2f, theta max %.1f deg, level %d counts",
+             CONTROL_LOOP_PERIOD_US, BALL_SETPOINT_CM, PID_KP, PID_KI, PID_KD, BEAM_THETA_MAX_DEG, ENC_LEVEL_COUNTS);
 
     telemetry_init();
 
