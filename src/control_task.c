@@ -43,6 +43,10 @@ void control_get_config(proto_config_t *out)
     out->irun = STEP_TMC_IRUN;
     out->ihold = STEP_TMC_IHOLD;
     out->defaults = s_gains_default ? 1 : 0;
+    out->kp_def = PID_KP;
+    out->ki_def = PID_KI;
+    out->kd_def = PID_KD;
+    out->d_tau_def = PID_D_TAU_S;
 }
 
 static gptimer_handle_t s_timer;

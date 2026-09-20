@@ -121,4 +121,5 @@ typedef struct __attribute__((packed)) {
     int16_t level_counts;
     uint8_t irun, ihold;
     uint8_t defaults;     // 1 while the gains are the compiled-in ones
+    float kp_def, ki_def, kd_def, d_tau_def; // the compiled-in gains
 } proto_config_t;
