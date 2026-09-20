@@ -66,41 +66,30 @@ void app_main(void)
 
 static const char *TAG = "main";
 
-static void halt(const char *why)
-{
-    ESP_LOGE(TAG, "%s -- not starting. Fix and reset.", why);
-    while (true) {
-        vTaskDelay(pdMS_TO_TICKS(10000));
-    }
-}
-
 void app_main(void)
 {
-    ESP_LOGI(TAG, "ball_beam Faz 3: %d us loop, PID on the camera position, setpoint %.1f cm, "
+    ESP_LOGI(TAG, "ball_beam Faz 4: %d us loop, PID on the camera position, setpoint %.1f cm, "
              "Kp %.2f Ki %.2f Kd %.2f, theta max %.1f deg, level %d counts",
              CONTROL_LOOP_PERIOD_US, BALL_SETPOINT_CM, PID_KP, PID_KI, PID_KD, BEAM_THETA_MAX_DEG, ENC_LEVEL_COUNTS);
 
+    // The PC link comes up first, whatever else fails: the operator must
+    // always be able to see the board's state and the reason it refuses to
+    // run. Hardware faults start the control task in FAULT.
     telemetry_init();
-
-    if (encoder_init() != ESP_OK) {
-        halt("encoder not answering");
-    }
-    // K-019: no homing. The beam must be resting at 6 with the driver off.
-    encoder_sample_t enc;
-    encoder_update(&enc);
-    if (!enc.ok || enc.pos_counts < -ENC_START_WINDOW_COUNTS || enc.pos_counts > ENC_START_WINDOW_COUNTS) {
-        ESP_LOGE(TAG, "shaft at %.1f counts from 6 (raw %u); expected within +-%d",
-                 enc.pos_counts, enc.raw, ENC_START_WINDOW_COUNTS);
-        halt("beam is not resting at 6");
-    }
-    ESP_LOGI(TAG, "shaft at 6 (%.1f counts, raw %u)", enc.pos_counts, enc.raw);
-
-    if (stepper_init() != ESP_OK) {
-        halt("stepper/TMC2208 init failed");
-    }
-
     pc_link_init();
+
+    fault_t initial = FAULT_NONE;
+    if (encoder_init() != ESP_OK) {
+        ESP_LOGE(TAG, "encoder not answering -- starting in FAULT");
+        initial = FAULT_ENC_DEAD;
+    } else if (stepper_init() != ESP_OK) {
+        ESP_LOGE(TAG, "stepper/TMC2208 init failed -- starting in FAULT");
+        initial = FAULT_TMC_UART;
+    }
+    // The rest-at-6 check (K-019) happens in the control task before it
+    // engages, so a beam left mid-air is a recoverable FAULT_NOT_AT_REST.
+
     diag_start();
-    control_start();
+    control_start(initial);
 }
 #endif

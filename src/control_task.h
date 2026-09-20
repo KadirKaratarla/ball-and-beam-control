@@ -9,6 +9,10 @@
 // logs (K-022). Every phase is timed so the Faz 2.2 budget comes from
 // measurement.
 
-// Creates the task and starts the timer. The driver stays off until
-// MOTION_START_DELAY_MS have passed. Call after encoder/stepper/link init.
-void control_start(void);
+#include "telemetry.h"
+
+// Creates the task and starts the timer. With initial_fault == FAULT_NONE
+// the driver engages after MOTION_START_DELAY_MS (if the beam rests near
+// 6); otherwise the task starts latched in FAULT and waits for a
+// RESET_FAULT command. Call after encoder/stepper/link init.
+void control_start(fault_t initial_fault);

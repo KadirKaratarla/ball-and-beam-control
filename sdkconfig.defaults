@@ -17,3 +17,8 @@ CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
 CONFIG_SPIRAM=y
 CONFIG_SPIRAM_MODE_OCT=y
 CONFIG_SPIRAM_SPEED_80M=y
+
+# A hung control task (seen: I2C bus lockup spinning inside the driver) must
+# not leave the motor energised forever: the task watchdog panics -> reboot
+# -> driver off -> the PC link reports the fault.
+CONFIG_ESP_TASK_WDT_PANIC=y

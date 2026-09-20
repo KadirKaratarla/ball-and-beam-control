@@ -8,6 +8,8 @@
 #include "esp_log.h"
 
 #include "config.h"
+#include "pc_link.h"
+#include "protocol.h"
 
 static const char *TAG = "telem";
 
@@ -22,6 +24,7 @@ static const char *state_name(uint8_t s)
     case CTRL_STATE_LEVEL_HOLD: return "LEVEL";
     case CTRL_STATE_RUN: return "RUN";
     case CTRL_STATE_FAULT: return "FAULT";
+    case CTRL_STATE_STOP: return "STOP";
     default: return "?";
     }
 }
@@ -35,6 +38,7 @@ static const char *fault_name(uint8_t f)
     case FAULT_ENC_DEAD: return "ENC_DEAD";
     case FAULT_TMC_RESET: return "TMC_RESET";
     case FAULT_TMC_UART: return "TMC_UART";
+    case FAULT_NOT_AT_REST: return "NOT_AT_REST";
     default: return "?";
     }
 }
@@ -68,14 +72,86 @@ static void print_stats(const telem_stats_t *st)
            (unsigned long)s_dropped);
 }
 
+static inline int16_t clamp16(float v)
+{
+    if (v > 32767.0f) return 32767;
+    if (v < -32768.0f) return -32768;
+    return (int16_t)v;
+}
+
+static void send_sample(const telem_sample_t *s)
+{
+    proto_telem_t t = {
+        .t_ms = s->t_ms,
+        .x_0p1mm = clamp16(s->x_cm * 100.0f),
+        .x_set_0p1mm = clamp16(s->x_set_cm * 100.0f),
+        .p_0p01deg = clamp16(s->p * 100.0f),
+        .i_0p01deg = clamp16(s->i * 100.0f),
+        .d_0p01deg = clamp16(s->d * 100.0f),
+        .theta_0p01deg = clamp16(s->theta_cmd * 100.0f),
+        .phi_0p1deg = clamp16(s->phi_cmd * 10.0f),
+        .enc_counts = clamp16(s->enc_pos),
+        .follow_0p1 = clamp16(s->follow_err * 10.0f),
+        .lag_counts = (int8_t)(s->lag_comp > 127 ? 127 : s->lag_comp < -128 ? -128 : s->lag_comp),
+        .state = s->state,
+        .fault = s->fault,
+        .flags = (uint8_t)((s->ball_valid ? PROTO_TF_BALL_VALID : 0) |
+                           (s->link_stale ? PROTO_TF_LINK_STALE : 0) |
+                           (s->driver_on ? PROTO_TF_DRIVER_ON : 0)),
+        .last_seq = s->last_seq,
+        .loop_us = s->loop_us,
+        .cmd_vel_10 = clamp16(s->cmd_vel / 10.0f),
+    };
+    pc_link_send(PROTO_T_TELEM, &t, sizeof(t));
+}
+
+static inline uint16_t clampu16(uint32_t v)
+{
+    return v > 65535 ? 65535 : (uint16_t)v;
+}
+
+static void send_stats(const telem_stats_t *st)
+{
+    uint32_t n = st->ticks ? st->ticks : 1;
+    proto_health_t h = {
+        .ticks = clampu16(st->ticks),
+        .loop_us_mean = clampu16(st->total_us_sum / n),
+        .loop_us_max = clampu16(st->total_us_max),
+        .overruns = clampu16(st->overruns),
+        .missed = clampu16(st->missed_ticks),
+        .enc_i2c_errors = st->enc_i2c_errors,
+        .enc_rejects = st->enc_rejects,
+        .enc_dir_faults = st->enc_dir_faults,
+        .link_packets = st->link_packets,
+        .link_crc_errors = st->link_crc_errors,
+        .link_seq_gaps = st->link_seq_gaps,
+        .cmd_rx = st->cmd_rx,
+        .cmd_bad = st->cmd_bad,
+        .tx_dropped = st->tx_dropped,
+        .tmc_resets = clampu16(st->tmc_resets),
+        .tmc_uart_errors = clampu16(st->tmc_uart_errors),
+        .drv_status = st->drv_status,
+        .state = st->state,
+        .fault = st->fault,
+    };
+    pc_link_send(PROTO_T_HEALTH, &h, sizeof(h));
+}
+
 static void telemetry_task(void *arg)
 {
     telem_msg_t msg;
+    uint32_t n_samples = 0;
     while (true) {
         if (xQueueReceive(s_queue, &msg, portMAX_DELAY) != pdTRUE) continue;
         switch (msg.kind) {
-        case TELEM_SAMPLE: print_sample(&msg.u.sample); break;
-        case TELEM_STATS: print_stats(&msg.u.stats); break;
+        case TELEM_SAMPLE:
+            send_sample(&msg.u.sample);
+            if (TELEM_CONSOLE && (n_samples++ % TELEM_CONSOLE_DECIMATION) == 0) print_sample(&msg.u.sample);
+            break;
+        case TELEM_STATS:
+            send_stats(&msg.u.stats);
+            if (TELEM_CONSOLE) print_stats(&msg.u.stats);
+            break;
         }
     }
 }
@@ -84,7 +160,11 @@ void telemetry_init(void)
 {
     s_queue = xQueueCreate(TELEM_QUEUE_LEN, sizeof(telem_msg_t));
     xTaskCreatePinnedToCore(telemetry_task, "telem", 4096, NULL, TASK_TELEM_PRIO, NULL, TASK_AUX_CORE);
-    ESP_LOGI(TAG, "S rows: t_ms,x_cm,x_set,ball,P,I,D,theta_cmd,phi_cmd,enc_pos,follow_err,lag_comp,cmd_vel,link_age_ms,loop_us,state");
+    ESP_LOGI(TAG, "binary TELEM at %d Hz, HEALTH at 1 Hz on the USB link; console rows %s",
+             1000000 / CONTROL_LOOP_PERIOD_US / TELEM_SAMPLE_DECIMATION, TELEM_CONSOLE ? "on" : "off");
+    if (TELEM_CONSOLE) {
+        ESP_LOGI(TAG, "S rows: t_ms,x_cm,x_set,ball,P,I,D,theta_cmd,phi_cmd,enc_pos,follow_err,lag_comp,cmd_vel,link_age_ms,loop_us,state");
+    }
 }
 
 bool telemetry_push(const telem_msg_t *msg)

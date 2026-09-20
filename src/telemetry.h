@@ -13,6 +13,7 @@ typedef enum {
     CTRL_STATE_LEVEL_HOLD = 2, // beam held level: no ball / link stale
     CTRL_STATE_RUN = 3,        // closed loop on the ball position
     CTRL_STATE_FAULT = 4,      // latched, driver off
+    CTRL_STATE_STOP = 5,       // stopped by command, driver off
 } ctrl_state_t;
 
 typedef enum {
@@ -21,7 +22,8 @@ typedef enum {
     FAULT_FOLLOW_ERR,  // pulses vs encoder disagree
     FAULT_ENC_DEAD,    // too many consecutive bad reads
     FAULT_TMC_RESET,   // driver lost its registers
-    FAULT_TMC_UART,    // driver stopped answering
+    FAULT_TMC_UART,    // driver stopped answering (or never did at boot)
+    FAULT_NOT_AT_REST, // beam not resting near 6 when asked to engage (K-019)
 } fault_t;
 
 // 10 Hz row (Faz 3.6 format; becomes the Faz 4 telemetry packet)
@@ -39,6 +41,10 @@ typedef struct {
     uint16_t link_age_ms; // age of the last valid packet
     uint16_t loop_us;
     uint8_t state;
+    uint8_t fault;
+    uint8_t link_stale;
+    uint8_t driver_on;
+    uint8_t last_seq;     // seq of the last POS packet used by the PID
 } telem_sample_t;
 
 // 1 Hz budget + health line
@@ -53,6 +59,7 @@ typedef struct {
     uint32_t missed_ticks;           // ISRs that found the task still busy
     uint32_t enc_i2c_errors, enc_rejects, enc_dir_faults; // cumulative
     uint32_t link_packets, link_crc_errors, link_seq_gaps;
+    uint32_t cmd_rx, cmd_bad, tx_dropped;
     uint32_t tmc_resets, tmc_uart_errors;
     uint32_t drv_status;
     uint8_t state;

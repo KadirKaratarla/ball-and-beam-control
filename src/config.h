@@ -109,7 +109,13 @@
 // (theta in rad). PD for wn = 3 rad/s, zeta = 0.7: Kp = wn^2/700,
 // Kd = 2 zeta wn / 700, converted to deg/cm. Starting point for 3.5.
 // ---------------------------------------------------------------------------
-#define BALL_SETPOINT_CM 22.5f   // beam centre (camera axis 0..45 cm)
+#define BALL_SETPOINT_CM 22.5f   // default: beam centre (camera axis 0..45 cm)
+#define BALL_SETPOINT_MIN_CM 3.0f // limits for the SETPOINT command
+#define BALL_SETPOINT_MAX_CM 42.0f
+// Limits for the GAINS command (protocol): anything above is refused.
+#define PID_KP_MAX 3.0f
+#define PID_KI_MAX 1.0f
+#define PID_KD_MAX 2.0f
 #define PID_KP 0.74f             // deg per cm
 #define PID_KI 0.15f             // deg per cm*s; first run held 1 cm off the setpoint with Ki=0
 #define PID_KD 0.34f             // deg per cm/s
@@ -163,9 +169,13 @@
 // ---------------------------------------------------------------------------
 // Telemetry
 // ---------------------------------------------------------------------------
-#define TELEM_SAMPLE_DECIMATION 5 // 250 Hz / 5 = 50 Hz rows (tuning); 25 for normal use
-#define TELEM_STATS_TICKS 250      // 1 Hz budget/health line
+#define TELEM_SAMPLE_DECIMATION 2 // 250 Hz / 2 = 125 Hz binary TELEM frames
+#define TELEM_STATS_TICKS 250      // 1 Hz HEALTH frame / budget line
 #define TELEM_QUEUE_LEN 32
+// Console text rows (S,/B,) next to the binary stream. Off by default: the
+// PC is the consumer now; turn on for a bench session without the GUI.
+#define TELEM_CONSOLE 0
+#define TELEM_CONSOLE_DECIMATION 5 // of the binary rate -> 25 Hz rows
 
 // ---------------------------------------------------------------------------
 // Tasks
