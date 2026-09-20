@@ -22,6 +22,29 @@
 
 static const char *TAG = "control";
 
+// Live configuration, mirrored for CONFIG replies (written by the control
+// task, read by the link task; a torn read of a float is harmless here).
+static volatile float s_setpoint_cm = BALL_SETPOINT_CM;
+static volatile float s_kp = PID_KP, s_ki = PID_KI, s_kd = PID_KD, s_d_tau = PID_D_TAU_S;
+static volatile bool s_gains_default = true;
+
+void control_get_config(proto_config_t *out)
+{
+    out->version = PROTO_VERSION;
+    out->kp = s_kp;
+    out->ki = s_ki;
+    out->kd = s_kd;
+    out->d_tau_s = s_d_tau;
+    out->theta_max_deg = BEAM_THETA_MAX_DEG;
+    out->x_set_0p1mm = (int16_t)(s_setpoint_cm * 100.0f);
+    out->vmax = STEP_VMAX_CLOSED_LOOP;
+    out->amax = STEP_AMAX_CLOSED_LOOP;
+    out->level_counts = ENC_LEVEL_COUNTS;
+    out->irun = STEP_TMC_IRUN;
+    out->ihold = STEP_TMC_IHOLD;
+    out->defaults = s_gains_default ? 1 : 0;
+}
+
 static gptimer_handle_t s_timer;
 static TaskHandle_t s_task;
 static volatile int64_t s_isr_us;
@@ -77,8 +100,8 @@ static int32_t crank_target_usteps(float theta_deg, float enc_at_engage, float *
 
 static void control_task(void *arg)
 {
-    ctrl_state_t state = CTRL_STATE_WAIT;
-    fault_t fault = FAULT_NONE;
+    fault_t fault = (fault_t)(uintptr_t)arg;
+    ctrl_state_t state = fault == FAULT_NONE ? CTRL_STATE_WAIT : CTRL_STATE_FAULT;
     encoder_sample_t enc;
     pc_link_state_t link;
     telem_stats_t st;
@@ -107,6 +130,7 @@ static void control_task(void *arg)
     // engage); this integrates (target - measured) while the crank is at
     // rest so the measured shaft, not the pulse count, lands on target.
     float lag_comp = 0.0f;
+    bool level_only = false; // MODE LEVEL: hold level even with the ball in view
     // Crank target actually handed to the tracker. In RUN it only follows
     // target_usteps when the change exceeds CRANK_CMD_DEADBAND_COUNTS, so
     // camera noise (0.06 deg of theta = 1 deg of crank) does not keep the
@@ -148,8 +172,57 @@ static void control_task(void *arg)
         float follow = cmd_pos - (enc.pos_counts - enc_at_engage);
         const diag_state_t *diag = diag_get();
 
-        // 2. guards
-        if (state != CTRL_STATE_FAULT) {
+        // 2a. commands from the PC (already validated by pc_link)
+        pc_cmd_t cmd;
+        while (pc_link_pop_cmd(&cmd)) {
+            switch (cmd.type) {
+            case PC_CMD_SETPOINT:
+                s_setpoint_cm = cmd.u.setpoint_cm;
+                break;
+            case PC_CMD_GAINS:
+                pid.cfg.kp = s_kp = cmd.u.gains.kp;
+                pid.cfg.ki = s_ki = cmd.u.gains.ki;
+                pid.cfg.kd = s_kd = cmd.u.gains.kd;
+                pid.cfg.d_tau = s_d_tau = cmd.u.gains.d_tau_s;
+                pid.integral = 0.0f; // new gains start from a clean integral
+                s_gains_default = false;
+                break;
+            case PC_CMD_MODE:
+                switch (cmd.u.mode) {
+                case PROTO_MODE_STOP:
+                    if (state != CTRL_STATE_FAULT) {
+                        stepper_halt();
+                        stepper_enable(false);
+                        state = CTRL_STATE_STOP;
+                    }
+                    break;
+                case PROTO_MODE_LEVEL:
+                    if (state == CTRL_STATE_RUN) {
+                        state = CTRL_STATE_LEVEL_HOLD;
+                    }
+                    level_only = true;
+                    break;
+                case PROTO_MODE_RUN:
+                    level_only = false;
+                    break;
+                case PROTO_MODE_RESET_FAULT:
+                    if (state == CTRL_STATE_FAULT || state == CTRL_STATE_STOP) {
+                        // Re-engage from wherever the crank came to rest: the
+                        // beam dropped toward 6 when the driver went off.
+                        fault = FAULT_NONE;
+                        lag_comp = 0.0f;
+                        enc_bad_ticks = 0;
+                        start_at = t0 + (int64_t)MOTION_START_DELAY_MS * 1000;
+                        state = CTRL_STATE_WAIT;
+                    }
+                    break;
+                }
+                break;
+            }
+        }
+
+        // 2b. guards
+        if (state != CTRL_STATE_FAULT && state != CTRL_STATE_STOP) {
             enc_bad_ticks = enc.ok ? 0 : enc_bad_ticks + 1;
             if (enc_bad_ticks >= GUARD_ENC_BAD_TICKS) {
                 trip_fault(&state, &fault, FAULT_ENC_DEAD);
@@ -166,6 +239,13 @@ static void control_task(void *arg)
         switch (state) {
         case CTRL_STATE_WAIT:
             if (t0 >= start_at) {
+                // K-019: no homing, but the beam must be resting near 6 so
+                // the driver engages under low load with a known geometry.
+                if (!enc.ok || enc.pos_counts < -ENC_START_WINDOW_COUNTS || enc.pos_counts > ENC_START_WINDOW_COUNTS) {
+                    state = CTRL_STATE_FAULT;
+                    fault = FAULT_NOT_AT_REST;
+                    break;
+                }
                 stepper_enable(true); // near 6: low load
                 engaged_at_us = t0;
                 enc_at_engage = enc.pos_counts;
@@ -199,7 +279,7 @@ static void control_task(void *arg)
         case CTRL_STATE_LEVEL_HOLD:
             theta_cmd = 0.0f;
             target_usteps = crank_target_usteps(0.0f, enc_at_engage, &phi_cmd);
-            if (!ball_lost) {
+            if (!ball_lost && !level_only) {
                 pid_reset(&pid);
                 last_frame_us = 0;
                 state = CTRL_STATE_RUN;
@@ -219,12 +299,13 @@ static void control_task(void *arg)
                 if (dt < 0.005f) dt = 0.005f;
                 if (dt > 0.050f) dt = 0.050f;
                 last_frame_us = link.received_at_us;
-                theta_cmd = pid_update(&pid, BALL_SETPOINT_CM, x_cm, dt);
+                theta_cmd = pid_update(&pid, s_setpoint_cm, x_cm, dt);
                 target_usteps = crank_target_usteps(theta_cmd, enc_at_engage, &phi_cmd);
             }
             break;
 
         case CTRL_STATE_FAULT:
+        case CTRL_STATE_STOP:
             break;
         }
         int64_t t2 = esp_timer_get_time();
@@ -244,7 +325,8 @@ static void control_task(void *arg)
             if (lag_comp < -LAG_COMP_MAX_COUNTS) lag_comp = -LAG_COMP_MAX_COUNTS;
         }
         int32_t applied = held_usteps + (int32_t)(lag_comp * STEP_USTEPS_PER_COUNT);
-        float vel = (state == CTRL_STATE_FAULT || state == CTRL_STATE_WAIT) ? 0.0f : stepper_track(applied);
+        bool driving = state == CTRL_STATE_ENGAGE || state == CTRL_STATE_LEVEL_HOLD || state == CTRL_STATE_RUN;
+        float vel = driving ? stepper_track(applied) : 0.0f;
         int64_t t3 = esp_timer_get_time();
 
         // 5. bookkeeping (cheap; the queue copy is the only real cost)
@@ -261,7 +343,7 @@ static void control_task(void *arg)
             m.u.sample = (telem_sample_t){
                 .t_ms = (uint32_t)((t0 - t_origin) / 1000),
                 .x_cm = x_cm,
-                .x_set_cm = BALL_SETPOINT_CM,
+                .x_set_cm = s_setpoint_cm,
                 .ball_valid = ball_valid && !stale,
                 .p = pid.p, .i = pid.i, .d = pid.d,
                 .theta_cmd = theta_cmd,
@@ -273,6 +355,10 @@ static void control_task(void *arg)
                 .link_age_ms = (uint16_t)((t0 - link.received_at_us) / 1000 > 65535 ? 65535 : (t0 - link.received_at_us) / 1000),
                 .loop_us = (uint16_t)(t3 - t0),
                 .state = state,
+                .fault = fault,
+                .link_stale = stale,
+                .driver_on = stepper_is_enabled(),
+                .last_seq = last_seq,
             };
             telemetry_push(&m);
         }
@@ -286,6 +372,9 @@ static void control_task(void *arg)
             st.link_packets = link.packets;
             st.link_crc_errors = link.crc_errors;
             st.link_seq_gaps = link.seq_gaps;
+            st.cmd_rx = link.cmd_rx;
+            st.cmd_bad = link.cmd_bad;
+            st.tx_dropped = link.tx_dropped;
             st.tmc_resets = diag->resets;
             st.tmc_uart_errors = diag->uart_errors;
             st.drv_status = diag->drv_status;
@@ -301,7 +390,7 @@ static void control_task(void *arg)
     }
 }
 
-void control_start(void)
+void control_start(fault_t initial_fault)
 {
     gpio_config_t io = {
         .pin_bit_mask = 1ULL << PIN_LOOP_PROBE,
@@ -310,7 +399,8 @@ void control_start(void)
     gpio_config(&io);
     gpio_set_level(PIN_LOOP_PROBE, 0);
 
-    xTaskCreatePinnedToCore(control_task, "control", 6144, NULL, TASK_CONTROL_PRIO, &s_task, TASK_CONTROL_CORE);
+    xTaskCreatePinnedToCore(control_task, "control", 6144, (void *)(uintptr_t)initial_fault,
+                            TASK_CONTROL_PRIO, &s_task, TASK_CONTROL_CORE);
 
     gptimer_config_t cfg = {
         .clk_src = GPTIMER_CLK_SRC_DEFAULT,
@@ -329,6 +419,10 @@ void control_start(void)
     ESP_ERROR_CHECK(gptimer_enable(s_timer));
     ESP_ERROR_CHECK(gptimer_start(s_timer));
 
-    ESP_LOGI(TAG, "loop %d us on core %d prio %d; driver engages in %d ms and moves to level -- keep clear",
-             CONTROL_LOOP_PERIOD_US, TASK_CONTROL_CORE, TASK_CONTROL_PRIO, MOTION_START_DELAY_MS);
+    if (initial_fault == FAULT_NONE) {
+        ESP_LOGI(TAG, "loop %d us on core %d prio %d; driver engages in %d ms and moves to level -- keep clear",
+                 CONTROL_LOOP_PERIOD_US, TASK_CONTROL_CORE, TASK_CONTROL_PRIO, MOTION_START_DELAY_MS);
+    } else {
+        ESP_LOGW(TAG, "starting in FAULT %d; waiting for RESET_FAULT from the PC", initial_fault);
+    }
 }

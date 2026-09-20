@@ -1,6 +1,8 @@
 #include "encoder.h"
 
 #include "driver/i2c_master.h"
+#include "driver/gpio.h"
+#include "esp_rom_sys.h"
 #include "esp_log.h"
 #include "esp_check.h"
 
@@ -41,8 +43,48 @@ float encoder_pos_from_corrected(float corrected)
     return wrap_counts((corrected - s_pos_at_6) * (float)ENC_SIGN_TOWARD_12);
 }
 
+// A chip reset that lands in the middle of a read leaves the AS5600 driving
+// SDA low; the IDF driver then spins forever on a busy bus (seen 2026-09-20,
+// task watchdog on the control task). Standard recovery before the driver
+// touches the pins: clock SCL until the slave releases SDA, then a STOP.
+static void bus_recover(void)
+{
+    gpio_config_t io = {
+        .pin_bit_mask = (1ULL << PIN_AS5600_SDA) | (1ULL << PIN_AS5600_SCL),
+        .mode = GPIO_MODE_INPUT_OUTPUT_OD,
+        .pull_up_en = GPIO_PULLUP_DISABLE, // breakout has 10k pull-ups
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+    };
+    gpio_config(&io);
+    gpio_set_level(PIN_AS5600_SDA, 1);
+    gpio_set_level(PIN_AS5600_SCL, 1);
+    esp_rom_delay_us(10);
+    bool sda_low = gpio_get_level(PIN_AS5600_SDA) == 0;
+    // Always clock out a full byte plus ACK slot: a slave interrupted mid
+    // transfer may be waiting for clocks with SDA released, which a level
+    // check cannot see.
+    for (int i = 0; i < 9; i++) {
+        gpio_set_level(PIN_AS5600_SCL, 0);
+        esp_rom_delay_us(5);
+        gpio_set_level(PIN_AS5600_SCL, 1);
+        esp_rom_delay_us(5);
+    }
+    // STOP: SDA low -> high while SCL is high
+    gpio_set_level(PIN_AS5600_SDA, 0);
+    esp_rom_delay_us(5);
+    gpio_set_level(PIN_AS5600_SDA, 1);
+    esp_rom_delay_us(10);
+    if (sda_low) {
+        ESP_LOGW(TAG, "SDA was held low at boot; after recovery SDA=%d", gpio_get_level(PIN_AS5600_SDA));
+    }
+    gpio_reset_pin(PIN_AS5600_SDA);
+    gpio_reset_pin(PIN_AS5600_SCL);
+}
+
 esp_err_t encoder_init(void)
 {
+    bus_recover();
+
     i2c_master_bus_config_t bus_cfg = {
         .clk_source = I2C_CLK_SRC_DEFAULT,
         .i2c_port = I2C_NUM_0,
