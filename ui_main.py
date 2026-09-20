@@ -134,15 +134,24 @@ class MainWindow(QMainWindow):
             self.h_labels[key] = lb
         left.addWidget(h_box)
 
-        # record
+        # record / view / plots
         r_lay = QHBoxLayout()
         self.btn_rec = QPushButton("● Kayıt başlat")
         self.btn_rec.setCheckable(True)
         self.btn_rec.toggled.connect(self.toggle_record)
-        self.rec_label = QLabel("")
+        self.btn_view = QPushButton("Kamera görüntüsü")
+        self.btn_view.setCheckable(True)
+        self.btn_view.setToolTip("Takip penceresini aç/kapat (bant, tespit, konum)")
+        self.btn_view.toggled.connect(lambda on: self.camera.set_view(on))
+        self.btn_center = QPushButton("Grafikleri ortala")
+        self.btn_center.setToolTip("Grafikleri canlı pencereye ve varsayılan ölçeğe döndür")
+        self.btn_center.clicked.connect(lambda: self.plots.recenter())
         r_lay.addWidget(self.btn_rec)
-        r_lay.addWidget(self.rec_label, 1)
+        r_lay.addWidget(self.btn_view)
+        r_lay.addWidget(self.btn_center)
         left.addLayout(r_lay)
+        self.rec_label = QLabel("")
+        left.addWidget(self.rec_label)
         left.addStretch(1)
 
         leftw = QWidget()

@@ -9,7 +9,10 @@ the GUI process only ever touches queues.
 Child -> GUI (out_q):  ("status", text) | ("event", kind, port)
                        ("batch", pos_tuple_or_None, [(ptype, msg), ...], stats_dict, frames)
 GUI -> child (cmd_q):  ("setpoint", cm) | ("gains", kp, ki, kd, tau) | ("mode", m)
-                       ("ping",) | ("config",) | ("stop",)
+                       ("ping",) | ("config",) | ("view", on) | ("stop",)
+The camera view ("tracker" OpenCV window with the band, the detected
+centroid and the position) is drawn in this process, every 3rd frame,
+only while the GUI has it switched on.
 """
 
 import multiprocessing as mp
@@ -28,9 +31,11 @@ def _run(cmd_q, out_q, opts):
     seq = 0
     frames = 0
     running = True
+    view_on = False
+    view_shown = False
 
     def handle_cmds():
-        nonlocal running
+        nonlocal running, view_on
         while True:
             try:
                 c = cmd_q.get_nowait()
@@ -46,6 +51,8 @@ def _run(cmd_q, out_q, opts):
                 link.ping()
             elif c[0] == "config":
                 link.request_config()
+            elif c[0] == "view":
+                view_on = bool(c[1])
             elif c[0] == "stop":
                 running = False
 
@@ -97,10 +104,23 @@ def _run(cmd_q, out_q, opts):
                     calib_dict = calib.to_dict()
                 out_q.put(("status", f"tracking (calibration {calib_dict.get('created', '?')})"))
                 tr = trk.BallTracker(calib_dict)
+                import cv2
+                n = 0
                 while running:
                     frame, _ = cam.read(timestamp=True)
-                    reading, _ = tr.process(frame, time.perf_counter())
-                    emit((reading.pos_cm if reading.valid else 0.0, reading.valid, tr.health.warning() is not None))
+                    reading, centroid = tr.process(frame, time.perf_counter())
+                    warning = tr.health.warning()
+                    emit((reading.pos_cm if reading.valid else 0.0, reading.valid, warning is not None))
+                    n += 1
+                    if view_on:
+                        if n % 3 == 0:
+                            trk.draw_view(frame, tr, centroid, reading, warning, opts.get("scale", 2))
+                            cv2.waitKey(1)
+                            view_shown = True
+                    elif view_shown:
+                        cv2.destroyWindow("tracker")
+                        cv2.waitKey(1)
+                        view_shown = False
             finally:
                 cam.end()
     except Exception as e:
@@ -187,6 +207,9 @@ class LinkProxy(QObject):
 
     def request_config(self):
         self.cmd_q.put(("config",))
+
+    def set_view(self, on):
+        self.cmd_q.put(("view", bool(on)))
 
     # CameraThread compatibility for MainWindow.closeEvent
     def wait(self, ms=0):

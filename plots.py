@@ -55,11 +55,33 @@ class Plots(QWidget):
             p.showGrid(x=True, y=True, alpha=0.3)
             p.setLabel("bottom", "s")
             lay.addWidget(p)
+        self.p_th.setXLink(self.p_x)
+        self.p_enc.setXLink(self.p_x)
+        self.autoscroll = True
+        # any manual pan/zoom switches autoscroll off until "Ortala"
+        for p in (self.p_x, self.p_th, self.p_enc):
+            p.getViewBox().sigRangeChangedManually.connect(self._manual)
+        self.t_last = 0.0
 
         self.r_x, self.r_xs, self.r_th, self.r_p, self.r_i, self.r_d, self.r_enc, self.r_fol = (Ring() for _ in range(8))
         self.level_counts = 1101
 
+    def _manual(self, *a):
+        self.autoscroll = False
+
+    def recenter(self):
+        """Back to the live window and the default Y ranges."""
+        self.autoscroll = True
+        self.p_x.setYRange(0, 45)
+        self.p_th.setYRange(-3.5, 3.5)
+        self.p_enc.enableAutoRange(axis="y")
+        self._scroll()
+
+    def _scroll(self):
+        self.p_x.setXRange(max(0.0, self.t_last - WINDOW_S), max(WINDOW_S, self.t_last), padding=0)
+
     def push_telem(self, t_s, telem):
+        self.t_last = t_s
         self.r_x.push(t_s, telem.x_0p1mm / 100 if telem.flags & 1 else np.nan)
         self.r_xs.push(t_s, telem.x_set_0p1mm / 100)
         self.r_th.push(t_s, telem.theta / 100)
@@ -75,3 +97,5 @@ class Plots(QWidget):
                             (self.r_enc, self.c_enc), (self.r_fol, self.c_fol)):
             t, v = ring.ordered()
             curve.setData(t, v, connect="finite")
+        if self.autoscroll:
+            self._scroll()
