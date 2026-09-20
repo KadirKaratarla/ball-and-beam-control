@@ -1,151 +1,39 @@
-"""PC -> ESP32 position link -- Faz D.
+"""PC -> ESP32 position link over the Faz 4 binary protocol.
 
-Sends the ball position to the ESP32 over its built-in USB-Serial-JTAG port
-at 100 Hz and times the echo the firmware returns for every packet, which
-is how the round-trip latency of the whole link is measured.
-
-Packet (7 bytes, matches bb_esp32s3/src/pc_link.h):
-
-    AA 55 | seq u8 | pos i16 LE in 0.1 mm | flags u8 | crc8
-
-Echo from the ESP32 (4 bytes): AA 55 | seq | crc8
+Streams the ball position to the ESP32 at the camera frame rate (100 Hz)
+through esp_link.EspLink (auto-connect, auto-reconnect, framed protocol in
+protocol.py) and prints the board's own telemetry once a second.
 
 Two sources for the position:
 
-    --synthetic   a triangle wave 0..45 cm, no camera. Exercises the link
-                  on its own (D1 counters, D2 latency, D3 stall watchdog).
-    default       the calibration wizard, then the live tracker (D4).
+    --synthetic   a triangle wave 0..45 cm, no camera (link exercise only:
+                  the crank will chase it with no ball on the beam)
+    default       the calibration wizard, then the live tracker
 
---stall N        after N seconds, stop sending for 200 ms then resume, so
-                 the ESP32's staleness watchdog can be seen to fire and
-                 clear on its console.
+Options:
+    --stall N          after N seconds stop sending for 200 ms, then resume
+                       (the ESP32 must drop to LEVEL and come back)
+    --setpoint X       send a setpoint in cm once connected
+    --log FILE         CSV of every packet sent (tuning)
+    --skip-calibration reuse calibration.json (bench only)
 
 Usage:
     python link.py --synthetic
-    python link.py --synthetic --stall 5
     python link.py
 """
 
 import argparse
-import struct
-import threading
 import time
-from collections import deque
 
-import numpy as np
-import serial
-from serial.tools import list_ports
-
-SYNC = b"\xAA\x55"
-PACKET_LEN = 7
-ECHO_LEN = 4
-
-FLAG_VALID = 0x01
-FLAG_WARNING = 0x02
-
-# Espressif's USB-Serial-JTAG controller enumerates with this pair on every
-# ESP32-S3; the CH343 bridge that carries the console is a different VID.
-ESP_USB_VID = 0x303A
-ESP_USB_PID = 0x1001
+import protocol as P
+from esp_link import EspLink
 
 SEND_HZ = 100
 REPORT_S = 1.0
 
 
-def crc8(data):
-    """CRC8-ATM, bit order as in the TMC2208 datasheet -- shared with pc_link.c."""
-    crc = 0
-    for byte in data:
-        for _ in range(8):
-            if (crc >> 7) ^ (byte & 1):
-                crc = ((crc << 1) ^ 0x07) & 0xFF
-            else:
-                crc = (crc << 1) & 0xFF
-            byte >>= 1
-    return crc
-
-
-def build_packet(seq, pos_cm, valid, warning):
-    pos_0p1mm = int(round(pos_cm * 100)) if valid else 0
-    pos_0p1mm = max(-32768, min(32767, pos_0p1mm))
-    flags = (FLAG_VALID if valid else 0) | (FLAG_WARNING if warning else 0)
-    body = SYNC + struct.pack("<BhB", seq & 0xFF, pos_0p1mm, flags)
-    return body + bytes([crc8(body)])
-
-
-def find_esp_port():
-    for p in list_ports.comports():
-        if p.vid == ESP_USB_VID and p.pid == ESP_USB_PID:
-            return p.device
-    return None
-
-
-class EchoReader(threading.Thread):
-    """Pulls echoes off the port and turns them into round-trip times."""
-
-    def __init__(self, ser):
-        super().__init__(daemon=True)
-        self.ser = ser
-        self.pending = {}          # seq -> send time
-        self.rtts = deque(maxlen=2000)
-        self.echoes = 0
-        self.crc_errors = 0
-        self.lock = threading.Lock()
-        self.running = True
-
-    def sent(self, seq, t):
-        with self.lock:
-            self.pending[seq] = t
-
-    def run(self):
-        buf = bytearray()
-        while self.running:
-            # Block for the first byte only, then sweep up whatever else is
-            # already waiting. read(n) with a timeout returns on the timeout
-            # when fewer than n bytes arrive, which for 4-byte echoes every
-            # 10 ms meant every call sat out the full timeout and the RTT
-            # figure was mostly that wait.
-            chunk = self.ser.read(1)
-            if not chunk:
-                continue
-            waiting = self.ser.in_waiting
-            if waiting:
-                chunk += self.ser.read(waiting)
-            buf += chunk
-            while True:
-                i = buf.find(SYNC)
-                if i < 0:
-                    buf.clear()
-                    break
-                if len(buf) - i < ECHO_LEN:
-                    del buf[:i]
-                    break
-                frame = bytes(buf[i:i + ECHO_LEN])
-                del buf[:i + ECHO_LEN]
-                if crc8(frame[:3]) != frame[3]:
-                    self.crc_errors += 1
-                    continue
-                seq = frame[2]
-                now = time.perf_counter()
-                with self.lock:
-                    t_sent = self.pending.pop(seq, None)
-                    self.echoes += 1
-                    if t_sent is not None:
-                        self.rtts.append((now - t_sent) * 1000.0)
-
-    def report(self, sent):
-        with self.lock:
-            rtts = np.array(self.rtts) if self.rtts else None
-            lost = len(self.pending)
-        line = f"sent {sent:6d}  echoed {self.echoes:6d}  unanswered {lost:4d}  echo_crc_err {self.crc_errors}"
-        if rtts is not None and rtts.size:
-            line += (f"  | RTT ms  p50 {np.percentile(rtts, 50):5.2f}  p95 {np.percentile(rtts, 95):5.2f}"
-                     f"  p99 {np.percentile(rtts, 99):5.2f}  max {rtts.max():5.2f}")
-        return line
-
-
 def synthetic_positions(beam_cm, period_s=4.0):
-    """Triangle wave end to end: easy to eyeball on the ESP32 console."""
+    """Triangle wave end to end: easy to eyeball in the telemetry."""
     t0 = time.perf_counter()
     while True:
         phase = ((time.perf_counter() - t0) % period_s) / period_s
@@ -183,7 +71,8 @@ def main():
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--port", help="override auto-detection of the ESP32 USB-Serial-JTAG port")
     parser.add_argument("--synthetic", action="store_true", help="triangle wave instead of the camera")
-    parser.add_argument("--stall", type=float, default=0, help="seconds until a 200 ms send pause (D3)")
+    parser.add_argument("--stall", type=float, default=0, help="seconds until a 200 ms send pause")
+    parser.add_argument("--setpoint", type=float, default=None, help="setpoint in cm to send once connected")
     parser.add_argument("--beam-cm", type=float, default=45.0)
     parser.add_argument("--id", type=int, default=0)
     parser.add_argument("--fps", type=int, default=100)
@@ -198,26 +87,9 @@ def main():
         import calibrate
         args.calibration = calibrate.CALIB_PATH
 
-    port = args.port or find_esp_port()
-    if not port:
-        print(f"no ESP32 USB-Serial-JTAG port found (VID {ESP_USB_VID:04X} PID {ESP_USB_PID:04X}) "
-              "-- is the board's USB (not UART) connector plugged in?")
-        return
-    print(f"ESP32 link on {port}")
-
-    # DTR/RTS left low so opening the port can't be mistaken by the ROM for
-    # the reset-into-bootloader sequence esptool uses.
-    ser = serial.Serial()
-    ser.port = port
-    ser.baudrate = 115200  # ignored by USB CDC, but pyserial wants one
-    ser.timeout = 0.02
-    ser.dtr = False
-    ser.rts = False
-    ser.open()
-    ser.reset_input_buffer()
-
-    reader = EchoReader(ser)
-    reader.start()
+    link = EspLink(port=args.port,
+                   on_event=lambda kind, port: print(f"\n--- ESP32 {kind} ({port}) ---"))
+    link.start()
 
     source = synthetic_positions(args.beam_cm) if args.synthetic else tracker_positions(args)
     mode = "synthetic triangle wave" if args.synthetic else "camera tracker"
@@ -234,13 +106,17 @@ def main():
     next_report = next_send + REPORT_S
     start = next_send
     stalled = False
+    setpoint_sent = False
+    last_telem = None
+    last_health = None
+    telem_n = 0
 
     try:
         for pos_cm, valid, warning in source:
             now = time.perf_counter()
 
             if args.stall and not stalled and now - start >= args.stall:
-                print(f"\n--- stalling for 200 ms (watch the ESP32 console for STALE) ---")
+                print("\n--- stalling for 200 ms (the ESP32 must drop to LEVEL) ---")
                 time.sleep(0.2)
                 stalled = True
                 next_send = time.perf_counter()
@@ -253,26 +129,51 @@ def main():
                     time.sleep(sleep)
                 next_send += period
 
-            pkt = build_packet(seq, pos_cm, valid, warning)
             t_send = time.perf_counter()
-            ser.write(pkt)
-            reader.sent(seq, t_send)
+            link.send_position(seq, pos_cm, valid, warning)
             if log:
                 log.write(f"{t_send:.4f},{seq},{pos_cm:.3f},{int(valid)},{int(warning)}\n")
             seq = (seq + 1) & 0xFF
             sent += 1
 
+            if args.setpoint is not None and link.connected and not setpoint_sent:
+                link.set_setpoint(args.setpoint)
+                setpoint_sent = True
+
+            for ptype, msg in link.drain():
+                if ptype == P.T_TELEM:
+                    last_telem = msg
+                    telem_n += 1
+                elif ptype == P.T_HEALTH:
+                    last_health = msg
+                elif ptype == P.T_ACK and msg.cmd_type != P.T_PING and msg.result != P.ACK_OK:
+                    print(f"\nACK for 0x{msg.cmd_type:02X}: {P.ACK_NAMES.get(msg.result, msg.result)}")
+
             if t_send >= next_report:
-                print(f"pos {pos_cm:6.2f} cm  " + reader.report(sent))
+                if link.connected and last_telem:
+                    t = last_telem
+                    rtt = link.stats["rtt_ms"]
+                    print(f"pos {pos_cm:6.2f} cm  sent {sent:6d}  | ESP {P.STATE_NAMES.get(t.state, t.state):6s}"
+                          f"{' ' + P.FAULT_NAMES.get(t.fault, str(t.fault)) if t.fault else ''}"
+                          f"  x {t.x_0p1mm / 100:6.2f} set {t.x_set_0p1mm / 100:5.1f}  theta {t.theta / 100:+5.2f}"
+                          f"  enc {t.enc_counts:5d}  loop {t.loop_us:3d} us  telem {telem_n:4d}/s"
+                          f"  rtt {rtt:.1f} ms" if rtt is not None else "")
+                    if last_health and (last_health.overruns or last_health.link_crc_errors or last_health.enc_i2c_errors):
+                        h = last_health
+                        print(f"   health: overruns {h.overruns} link crc {h.link_crc_errors} gaps {h.link_seq_gaps} "
+                              f"enc i2c {h.enc_i2c_errors} rej {h.enc_rejects}")
+                else:
+                    print(f"pos {pos_cm:6.2f} cm  sent {sent:6d}  | ESP not connected (dropped {link.stats['tx_dropped']})")
+                telem_n = 0
                 next_report += REPORT_S
+                link.ping()
     except KeyboardInterrupt:
         pass
     finally:
-        reader.running = False
-        ser.close()
         if log:
             log.close()
-        print("\n" + reader.report(sent))
+        link.stop()
+        print(f"\nsent {sent}, tx dropped {link.stats['tx_dropped']}, reconnects {link.stats['reconnects']}")
 
 
 if __name__ == "__main__":
