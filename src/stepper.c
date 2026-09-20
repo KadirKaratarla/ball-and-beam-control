@@ -209,7 +209,12 @@ float stepper_track(int32_t target_usteps)
     if (mag <= 8) { // 8 usteps = 0.06 deg: close enough, stop
         return stepper_tick(0.0f);
     }
+    // sqrt profile lands under the acceleration limit from any distance;
+    // the linear term turns small corrections into a gentle glide instead
+    // of a full-acceleration burst (the audible buzz at rest).
     float v = sqrtf(2.0f * s_amax * (float)mag);
+    float v_lin = STEP_TRACK_KV * (float)mag;
+    if (v_lin < v) v = v_lin;
     if (v > s_vmax) v = s_vmax;
     return stepper_tick(e < 0 ? -v : v);
 }

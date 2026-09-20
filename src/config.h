@@ -64,12 +64,17 @@
 // +4..+9 counts static lag under gravity (rotor behind the field).
 #define STEP_VMAX_CLOSED_LOOP 43000.0f
 #define STEP_AMAX_CLOSED_LOOP 430000.0f
+// Position tracker: v = min(vmax, sqrt(2 a e), KV * e). The linear zone
+// (1/KV = 25 ms) makes sub-degree corrections glide at a few rpm instead
+// of bursting at full acceleration; large errors still get the sqrt/vmax
+// response (test_pid_sim / bench 2026-09-20).
+#define STEP_TRACK_KV 40.0f
 // Below this LEDC's divider runs out (80 MHz / 1024 / 1024 = 76 Hz), and
 // 80 usteps/s is 0.56 deg/s anyway: treated as stopped, pulses off.
 #define STEP_VMIN_HZ 80
 
-#define STEP_TMC_IRUN 20 // holds at level with margin (K-020)
-#define STEP_TMC_IHOLD 12
+#define STEP_TMC_IRUN 10 // 0.61 A rms (vsense=0: CS 31 = 1.77 A). 20 (1.16 A) and 14 (0.83 A) ran hot; load needs far less
+#define STEP_TMC_IHOLD 4
 #define STEP_TMC_IHOLDDELAY 4
 #define STEP_TMC_GCONF 0x000000C0u    // pdn_disable, mstep_reg_select
 #define STEP_TMC_CHOPCONF 0x100101B5u // MRES=0 (1/256), intpol, TBL=2, HSTRT=4, TOFF=5
@@ -106,10 +111,10 @@
 // ---------------------------------------------------------------------------
 #define BALL_SETPOINT_CM 22.5f   // beam centre (camera axis 0..45 cm)
 #define PID_KP 0.74f             // deg per cm
-#define PID_KI 0.0f              // deg per cm*s
+#define PID_KI 0.15f             // deg per cm*s; first run held 1 cm off the setpoint with Ki=0
 #define PID_KD 0.34f             // deg per cm/s
 #define PID_I_MAX_DEG 1.5f       // integral contribution clamp
-#define PID_D_TAU_S 0.06f        // derivative low-pass (camera noise)
+#define PID_D_TAU_S 0.15f        // derivative low-pass; 0.06 let 0.3 mm camera noise dither the crank +-1.8 deg at rest
 #define PID_DT_NOMINAL_S 0.01f   // camera frame period; the loop runs the PID per frame
 
 // ---------------------------------------------------------------------------
@@ -126,10 +131,19 @@
 // reference is taken after this settle time.
 #define ENGAGE_SETTLE_MS 200
 // Encoder correction of the crank command: integrates (target - measured)
-// with this time constant, bounded. Cancels the load-dependent rotor lag
-// (+4..+40 counts seen) so the beam angle is what the PID asked for.
-#define LAG_COMP_TAU_S 0.3f
+// with this time constant, bounded, and only while the crank is not being
+// driven (so it estimates the static rotor lag, not the dynamic one, and
+// adds no phase lag inside the ball loop's band). Cancels the
+// load-dependent lag (+4..+40 counts seen) so the beam angle is what the
+// PID asked for.
+#define LAG_COMP_TAU_S 1.5f
 #define LAG_COMP_MAX_COUNTS 60.0f
+// Crank command deadband (RUN only): changes smaller than this are not
+// sent to the motor. 5 counts = 0.4 deg crank = 0.025 deg beam, enough to
+// swallow pure camera noise; 14 produced a visible 1.2 deg step limit
+// cycle (+-0.5 cm of ball) on the bench.
+#define CRANK_CMD_DEADBAND_COUNTS 5
+#define CRANK_CMD_DEADBAND_USTEPS ((int32_t)(CRANK_CMD_DEADBAND_COUNTS * STEP_USTEPS_PER_COUNT))
 
 // ---------------------------------------------------------------------------
 // Guards -- any of these trips a latched fault: pulses off, driver disabled
@@ -149,7 +163,7 @@
 // ---------------------------------------------------------------------------
 // Telemetry
 // ---------------------------------------------------------------------------
-#define TELEM_SAMPLE_DECIMATION 25 // 250 Hz / 25 = 10 Hz rows
+#define TELEM_SAMPLE_DECIMATION 5 // 250 Hz / 5 = 50 Hz rows (tuning); 25 for normal use
 #define TELEM_STATS_TICKS 250      // 1 Hz budget/health line
 #define TELEM_QUEUE_LEN 32
 

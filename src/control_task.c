@@ -104,9 +104,14 @@ static void control_task(void *arg)
     int32_t target_usteps = 0;
     // Slow encoder correction of the crank command (counts). The rotor sits
     // behind the field by a load-dependent angle (up to ~40 counts seen at
-    // engage); this integrates (target - measured) with a 0.3 s time
-    // constant so the measured shaft, not the pulse count, lands on target.
+    // engage); this integrates (target - measured) while the crank is at
+    // rest so the measured shaft, not the pulse count, lands on target.
     float lag_comp = 0.0f;
+    // Crank target actually handed to the tracker. In RUN it only follows
+    // target_usteps when the change exceeds CRANK_CMD_DEADBAND_COUNTS, so
+    // camera noise (0.06 deg of theta = 1 deg of crank) does not keep the
+    // motor hunting at rest.
+    int32_t held_usteps = 0;
     int64_t engaged_at_us = 0;
     uint8_t last_seq = 0;
     int64_t last_frame_us = 0;      // arrival time of the last frame fed to the PID
@@ -224,14 +229,21 @@ static void control_task(void *arg)
         }
         int64_t t2 = esp_timer_get_time();
 
-        // 4. actuate (with the encoder lag correction in LEVEL/RUN)
-        if ((state == CTRL_STATE_LEVEL_HOLD || state == CTRL_STATE_RUN) && enc.ok) {
-            float target_counts = enc_at_engage + (float)target_usteps / STEP_USTEPS_PER_COUNT;
+        // 4. actuate (deadband in RUN, encoder lag correction in LEVEL/RUN)
+        {
+            int32_t delta = target_usteps - held_usteps;
+            if (state != CTRL_STATE_RUN || delta >= CRANK_CMD_DEADBAND_USTEPS || delta <= -CRANK_CMD_DEADBAND_USTEPS) {
+                held_usteps = target_usteps;
+            }
+        }
+        if ((state == CTRL_STATE_LEVEL_HOLD || state == CTRL_STATE_RUN) && enc.ok &&
+            stepper_get_velocity() == 0.0f) {
+            float target_counts = enc_at_engage + (float)held_usteps / STEP_USTEPS_PER_COUNT;
             lag_comp += (target_counts - enc.pos_counts) * (CONTROL_LOOP_PERIOD_US / 1e6f / LAG_COMP_TAU_S);
             if (lag_comp > LAG_COMP_MAX_COUNTS) lag_comp = LAG_COMP_MAX_COUNTS;
             if (lag_comp < -LAG_COMP_MAX_COUNTS) lag_comp = -LAG_COMP_MAX_COUNTS;
         }
-        int32_t applied = target_usteps + (int32_t)(lag_comp * STEP_USTEPS_PER_COUNT);
+        int32_t applied = held_usteps + (int32_t)(lag_comp * STEP_USTEPS_PER_COUNT);
         float vel = (state == CTRL_STATE_FAULT || state == CTRL_STATE_WAIT) ? 0.0f : stepper_track(applied);
         int64_t t3 = esp_timer_get_time();
 
