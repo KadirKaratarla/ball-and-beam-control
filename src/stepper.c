@@ -1,5 +1,7 @@
 #include "stepper.h"
 
+#include <math.h>
+
 #include "driver/gpio.h"
 #include "driver/ledc.h"
 #include "driver/pulse_cnt.h"
@@ -27,7 +29,9 @@ static float s_vel;          // usteps/s, signed, currently generated
 static uint32_t s_freq_hz;   // 0 = pulses off
 static int s_dir_level = -1; // last level written to DIR
 static bool s_enabled;
-static const float s_dv_max = STEP_AMAX * (CONTROL_LOOP_PERIOD_US / 1e6f);
+static float s_vmax = STEP_VMAX;
+static float s_amax = STEP_AMAX;
+static float s_dv_max = STEP_AMAX * (CONTROL_LOOP_PERIOD_US / 1e6f);
 
 bool stepper_configure_tmc(void)
 {
@@ -171,10 +175,17 @@ bool stepper_is_enabled(void)
     return s_enabled;
 }
 
+void stepper_set_limits(float vmax, float amax)
+{
+    s_vmax = vmax;
+    s_amax = amax;
+    s_dv_max = amax * (CONTROL_LOOP_PERIOD_US / 1e6f);
+}
+
 float stepper_tick(float target)
 {
-    if (target > STEP_VMAX) target = STEP_VMAX;
-    if (target < -STEP_VMAX) target = -STEP_VMAX;
+    if (target > s_vmax) target = s_vmax;
+    if (target < -s_vmax) target = -s_vmax;
 
     float dv = target - s_vel;
     if (dv > s_dv_max) dv = s_dv_max;
@@ -189,6 +200,18 @@ float stepper_tick(float target)
         pulses_set((uint32_t)(mag + 0.5f), dir);
     }
     return s_vel;
+}
+
+float stepper_track(int32_t target_usteps)
+{
+    int32_t e = target_usteps - stepper_get_step_count();
+    int32_t mag = e < 0 ? -e : e;
+    if (mag <= 8) { // 8 usteps = 0.06 deg: close enough, stop
+        return stepper_tick(0.0f);
+    }
+    float v = sqrtf(2.0f * s_amax * (float)mag);
+    if (v > s_vmax) v = s_vmax;
+    return stepper_tick(e < 0 ? -v : v);
 }
 
 void stepper_halt(void)

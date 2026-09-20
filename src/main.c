@@ -14,6 +14,7 @@
 #include "test_motor_free.h"
 #include "test_timer_jitter.h"
 #include "test_pid_sim.h"
+#include "test_jog.h"
 
 #define TEST_TMC_BRINGUP   1
 #define TEST_TIMER_JITTER  2 // Faz 1.1
@@ -23,8 +24,9 @@
 #define TEST_MOTOR_ENCODER 6 // Faz 3.3 / 3.4 first data
 #define TEST_MOTOR_FREE    7 // shaft free: 1 rev = 4096 counts?
 #define TEST_PID_SIM       8 // Faz 3.1, nothing connected
+#define TEST_JOG           9 // Faz 3.3, interactive: level offset + speed sweep
 
-#define ACTIVE_TEST TEST_PID_SIM
+#define ACTIVE_TEST TEST_JOG
 
 void app_main(void)
 {
@@ -44,6 +46,8 @@ void app_main(void)
     test_motor_free();
 #elif ACTIVE_TEST == TEST_PID_SIM
     test_pid_sim();
+#elif ACTIVE_TEST == TEST_JOG
+    test_jog();
 #else
 #error "ACTIVE_TEST selects a test that has not been implemented yet"
 #endif

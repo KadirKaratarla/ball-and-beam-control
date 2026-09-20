@@ -56,6 +56,12 @@
 #define STEP_VMAX 3200.0f
 // 8000 usteps/s^2 reaches VMAX in 0.4 s.
 #define STEP_AMAX 8000.0f
+// What the closed loop needs (test_pid_sim: unstable at 3200, settles in
+// 1 s at 43000 = 50 rpm). Validated by test_jog's speed sweep on
+// 2026-09-20: +-53 deg swings, no step loss, 20 counts dynamic lag,
+// +4..+9 counts static lag under gravity (rotor behind the field).
+#define STEP_VMAX_CLOSED_LOOP 43000.0f
+#define STEP_AMAX_CLOSED_LOOP 430000.0f
 // Below this LEDC's divider runs out (80 MHz / 1024 / 1024 = 76 Hz), and
 // 80 usteps/s is 0.56 deg/s anyway: treated as stopped, pulses off.
 #define STEP_VMIN_HZ 80
@@ -80,10 +86,10 @@
 // Pivot x: beam-end pin is directly above the 9 o'clock crank pin (x = -r).
 #define LINK_PIVOT_DX_MM (LINK_BEAM_D_MM - LINK_CRANK_R_MM)
 
-// Encoder counts (from 6) at which the beam is level. Nominal 90 deg from
-// 6 = 1024; K-021 put it near 87 deg. MUST be measured with the jog test
-// before closed loop -- until then this is a placeholder.
-#define ENC_LEVEL_COUNTS 1024
+// Encoder counts (from 6) at which the beam is level: measured with
+// test_jog and a spirit level on 2026-09-20 (raw 3545, 96.8 deg from 6).
+// Depends only on the magnet seating; re-measure if the magnet moves.
+#define ENC_LEVEL_COUNTS 1101
 
 // Beam angle limit. The 90 mm rod tilts as the pin swings, so the exact
 // curve is asymmetric: theta(-90) = -4.33, theta(+90) = +3.09 with a peak
