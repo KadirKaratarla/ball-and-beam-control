@@ -208,7 +208,8 @@ static void control_task(void *arg)
                     break;
                 case PROTO_MODE_RUN:
                     level_only = false;
-                    break;
+                    if (state != CTRL_STATE_STOP && state != CTRL_STATE_FAULT) break;
+                    // fall through: RUN from STOP/FAULT re-engages like RESET_FAULT
                 case PROTO_MODE_RESET_FAULT:
                     if (state == CTRL_STATE_FAULT || state == CTRL_STATE_STOP) {
                         // Re-engage from wherever the crank came to rest: the
