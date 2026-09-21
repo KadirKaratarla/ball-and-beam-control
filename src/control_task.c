@@ -254,6 +254,14 @@ static void control_task(void *arg)
                 stepper_enable(true); // near 6: low load
                 engaged_at_us = t0;
                 enc_at_engage = enc.pos_counts;
+                // Fresh position reference: the pulse counter, the held and
+                // requested targets and the lag correction all restart here
+                // (a re-engage after STOP/FAULT otherwise inherits the old
+                // pulse count and trips FOLLOW_ERR at once).
+                stepper_halt();
+                stepper_reset_position();
+                held_usteps = 0;
+                lag_comp = 0.0f;
                 target_usteps = 0; // hold still while the rotor snaps to its pole
                 stepper_set_limits(STEP_VMAX_ENGAGE, STEP_AMAX_ENGAGE);
                 theta_cmd = 0.0f;

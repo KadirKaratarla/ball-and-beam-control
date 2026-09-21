@@ -225,6 +225,11 @@ void stepper_halt(void)
     s_vel = 0;
 }
 
+void stepper_reset_position(void)
+{
+    pcnt_unit_clear_count(s_pcnt);
+}
+
 float stepper_get_velocity(void)
 {
     return s_vel;
