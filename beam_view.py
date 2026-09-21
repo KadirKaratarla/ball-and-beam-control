@@ -31,7 +31,7 @@ class BeamView(QWidget):
         self.phi_deg = 0.0
         self.ball_valid = False
         self.state = "?"
-        self.setMinimumHeight(300)
+        self.setMinimumHeight(0)
         self.setToolTip("Setpoint için beam üzerine tıklayın")
 
     def update_state(self, x_cm, valid, x_set_cm, theta_deg, phi_deg, state):
@@ -47,8 +47,9 @@ class BeamView(QWidget):
         p2 = self._hinge()
         length = self.width() - 100
         ang = math.radians(self.theta_deg * ANGLE_EXAGGERATION)
-        # positive theta lifts the motor end (p1), so the ball rolls toward p2
-        p1 = QPointF(p2.x() - length * math.cos(ang), p2.y() - length * math.sin(ang))
+        # positive theta lifts the motor end (p1), so the ball rolls toward p2.
+        # p1 keeps its x (the motor tower is fixed to the base) and only rises.
+        p1 = QPointF(p2.x() - length, p2.y() - length * math.tan(ang))
         return p1, p2
 
     def _cm_to_point(self, cm):
@@ -76,7 +77,7 @@ class BeamView(QWidget):
 
     def _gauge(self, qp):
         # crank angle from level, -70..+70 deg, upper-left corner
-        cx, cy, R = 70, 70, 42
+        cx, cy, R = 60, 58, 34
         qp.setPen(QPen(TOWER, 3))
         rect = QRectF(cx - R, cy - R, 2 * R, 2 * R)
         qp.drawArc(rect, 20 * 16, 140 * 16)
@@ -95,7 +96,7 @@ class BeamView(QWidget):
         qp.drawEllipse(QPointF(cx, cy), 4, 4)
         qp.setPen(QPen(TEXT))
         qp.setFont(QFont("Segoe UI", 8))
-        qp.drawText(QRectF(cx - 50, cy + 8, 100, 14), Qt.AlignCenter, f"krank {self.phi_deg:+.1f}°")
+        qp.drawText(QRectF(cx - 50, cy + 6, 100, 14), Qt.AlignCenter, f"krank {self.phi_deg:+.1f}°")
 
     def paintEvent(self, ev):
         qp = QPainter(self)
@@ -108,9 +109,10 @@ class BeamView(QWidget):
         qp.setPen(QPen(TOWER, 6, Qt.SolidLine, Qt.RoundCap))
         qp.drawLine(QPointF(p2.x(), p2.y()), QPointF(p2.x(), floor))
         qp.setPen(QPen(TOWER, 4, Qt.SolidLine, Qt.RoundCap))
-        qp.drawLine(QPointF(p1.x() + 14, floor - 40), QPointF(p1.x() + 14, floor))  # motor tower
+        tower_x = p2.x() - (self.width() - 100) + 14  # fixed: does not follow the beam end
+        qp.drawLine(QPointF(tower_x, floor - 40), QPointF(tower_x, floor))  # motor tower
         qp.setPen(QPen(QColor(150, 156, 166), 2))
-        qp.drawLine(QPointF(p1.x() + 6, p1.y() + 2), QPointF(p1.x() + 14, floor - 40))  # rod
+        qp.drawLine(QPointF(p1.x() + 6, p1.y() + 2), QPointF(tower_x, floor - 40))  # rod
         qp.setPen(QPen(TOWER, 2))
         qp.drawLine(QPointF(30, floor), QPointF(self.width() - 20, floor))  # base
 

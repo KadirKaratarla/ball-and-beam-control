@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QFont, QImage, QPixmap
 from PySide6.QtWidgets import (QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QGridLayout, QSlider,
                                QDoubleSpinBox, QPushButton, QGroupBox, QSizePolicy, QStackedWidget, QTabWidget,
-                               QFrame)
+                               QFrame, QScrollArea)
 
 import protocol as P
 from beam_view import BeamView
@@ -29,7 +29,7 @@ FAULT_TEXT = {
 
 STYLE = """
 QMainWindow, QWidget { background: #1e2228; color: #d0d4dc; font-family: 'Segoe UI'; font-size: 10pt; }
-QGroupBox { border: 1px solid #3a4048; border-radius: 6px; margin-top: 10px; padding: 6px 6px 4px 6px; }
+QGroupBox { border: 1px solid #3a4048; border-radius: 6px; margin-top: 8px; padding: 4px 6px 2px 6px; }
 QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; color: #9aa3b0; }
 QPushButton { background: #2c323a; border: 1px solid #3f4650; border-radius: 4px; padding: 5px 10px; }
 QPushButton:hover { background: #363d47; }
@@ -41,7 +41,7 @@ QTabWidget::pane { border: 1px solid #3a4048; border-radius: 4px; }
 QTabBar::tab { background: #262b32; padding: 4px 10px; border: 1px solid #3a4048; border-bottom: none;
                border-top-left-radius: 4px; border-top-right-radius: 4px; }
 QTabBar::tab:selected { background: #333a44; }
-QLabel#cell { background: #151a1f; border: 1px solid #2f353d; border-radius: 4px; padding: 3px 6px;
+QLabel#cell { background: #151a1f; border: 1px solid #2f353d; border-radius: 4px; padding: 1px 5px;
               font-family: Consolas; font-size: 9pt; }
 QLabel#cellTitle { color: #8d96a3; font-size: 8pt; }
 """
@@ -62,8 +62,8 @@ class Cell(QWidget):
     def __init__(self, title):
         super().__init__()
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(2, 2, 2, 2)
-        lay.setSpacing(1)
+        lay.setContentsMargins(2, 0, 2, 0)
+        lay.setSpacing(0)
         t = QLabel(title)
         t.setObjectName("cellTitle")
         self.value = QLabel("--")
@@ -130,9 +130,21 @@ class MainWindow(QMainWindow):
         self.btn_rescan = QPushButton("Yeniden tara")
         self.btn_rescan.setToolTip("Kamerayı yeniden ara (ESP32 otomatik bulunur)")
         self.btn_rescan.clicked.connect(self.camera.rescan)
+        self.btn_rec = QPushButton("●  Kayıt")
+        self.btn_rec.setCheckable(True)
+        self.btn_rec.toggled.connect(self.toggle_record)
+        self.btn_view = QPushButton("Kamera")
+        self.btn_view.setCheckable(True)
+        self.btn_view.setToolTip("Şema yerine canlı takip görüntüsü")
+        self.btn_view.toggled.connect(self.toggle_view)
+        self.btn_center = QPushButton("Grafikleri ortala")
+        self.btn_center.clicked.connect(lambda: self.plots.recenter())
         top.addWidget(self.esp_strip, 1)
         top.addWidget(self.cam_strip, 1)
         top.addWidget(self.btn_rescan, 0)
+        top.addWidget(self.btn_view, 0)
+        top.addWidget(self.btn_rec, 0)
+        top.addWidget(self.btn_center, 0)
         vbox.addLayout(top)
         self.warn_strip = strip_label("", RED)
         self.warn_strip.hide()
@@ -141,11 +153,11 @@ class MainWindow(QMainWindow):
         # --- left column ---
         mid = QHBoxLayout()
         left = QVBoxLayout()
-        left.setSpacing(6)
+        left.setSpacing(4)
 
         # schematic / camera in one fixed slot
         self.stack = QStackedWidget()
-        self.stack.setFixedHeight(320)
+        self.stack.setFixedHeight(230)
         self.beam = BeamView(beam_cm)
         self.beam.setpoint_clicked.connect(self.send_setpoint)
         self.cam_view = QLabel("kamera görüntüsü bekleniyor")
@@ -217,7 +229,8 @@ class MainWindow(QMainWindow):
         def tab(name, spec, cols=3):
             w = QWidget()
             g = QGridLayout(w)
-            g.setContentsMargins(6, 6, 6, 6)
+            g.setContentsMargins(4, 2, 4, 2)
+            g.setVerticalSpacing(2)
             for i, (key, title) in enumerate(spec):
                 c = Cell(title)
                 self.cells[key] = c
@@ -234,31 +247,24 @@ class MainWindow(QMainWindow):
         tab("Link", (("pkt", "Konum paketleri"), ("crc", "CRC hataları"), ("gap", "Sıra boşlukları"),
                      ("cmd", "Komut ok / kötü"), ("txd", "ESP tx düşen"), ("recon", "Yeniden bağlanma")))
         tab("Kamera", (("camstate", "Kamera"), ("fps", "Kare hızı"), ("camdetail", "Ayrıntı")), cols=1)
+        self.tabs.setMinimumHeight(150)
         left.addWidget(self.tabs, 1)
 
-        # bottom buttons
-        r_lay = QHBoxLayout()
-        self.btn_rec = QPushButton("●  Kayıt")
-        self.btn_rec.setCheckable(True)
-        self.btn_rec.toggled.connect(self.toggle_record)
-        self.btn_view = QPushButton("Kamera")
-        self.btn_view.setCheckable(True)
-        self.btn_view.setToolTip("Şema yerine canlı takip görüntüsü")
-        self.btn_view.toggled.connect(self.toggle_view)
-        self.btn_center = QPushButton("Grafikleri ortala")
-        self.btn_center.clicked.connect(lambda: self.plots.recenter())
-        r_lay.addWidget(self.btn_rec)
-        r_lay.addWidget(self.btn_view)
-        r_lay.addWidget(self.btn_center)
-        left.addLayout(r_lay)
         self.rec_label = QLabel("")
         self.rec_label.setObjectName("cellTitle")
-        left.addWidget(self.rec_label)
+        self.statusBar().addWidget(self.rec_label, 1)
 
         leftw = QWidget()
         leftw.setLayout(left)
         leftw.setFixedWidth(520)
-        mid.addWidget(leftw, 0)
+        # scroll instead of overlapping when the screen is short (125% DPI on 1080p)
+        scroll = QScrollArea()
+        scroll.setWidget(leftw)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setFixedWidth(540)
+        mid.addWidget(scroll, 0)
         self.plots = Plots()
         mid.addWidget(self.plots, 1)
         vbox.addLayout(mid, 1)
@@ -277,7 +283,8 @@ class MainWindow(QMainWindow):
         self.rate_timer.timeout.connect(self.rates)
         self.rate_timer.start(1000)
 
-        self.resize(1450, 900)
+        self.setMinimumSize(1100, 640)
+        self.resize(1450, 800)
 
     # --- commands ------------------------------------------------------------
     @Slot(float)
