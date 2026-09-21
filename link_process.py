@@ -7,13 +7,15 @@ process has its own GIL: the loop here runs exactly as link.py does, and
 the GUI process only ever touches queues.
 
 Child -> GUI (out_q):  ("status", text) | ("event", kind, port)
+                       ("camera", "missing" | "opening" | "calibrating" | "tracking" | "error", detail)
                        ("batch", pos_tuple_or_None, [(ptype, msg), ...], stats_dict, frames)
                        ("image", jpeg_bytes)   every 4th frame while the view is on
 GUI -> child (cmd_q):  ("setpoint", cm) | ("gains", kp, ki, kd, tau) | ("mode", m)
-                       ("ping",) | ("config",) | ("view", on) | ("stop",)
-The camera view (band, detected centroid, position) is drawn here with
-tracker.render_view, JPEG-encoded and shipped to the GUI only while the
-GUI has it switched on; the GUI shows it inside its own window.
+                       ("ping",) | ("config",) | ("view", on) | ("rescan",) | ("stop",)
+
+The ESP link lives for the whole process regardless of the camera: with no
+camera the loop idles (telemetry still flows to the GUI), retries the
+camera every CAMERA_RETRY_S and immediately on "rescan".
 """
 
 import multiprocessing as mp
@@ -21,6 +23,8 @@ import queue
 import time
 
 from PySide6.QtCore import QObject, Signal
+
+CAMERA_RETRY_S = 3.0
 
 
 def _run(cmd_q, out_q, opts):
@@ -33,9 +37,10 @@ def _run(cmd_q, out_q, opts):
     frames = 0
     running = True
     view_on = False
+    rescan = False
 
     def handle_cmds():
-        nonlocal running, view_on
+        nonlocal running, view_on, rescan
         while True:
             try:
                 c = cmd_q.get_nowait()
@@ -53,6 +58,8 @@ def _run(cmd_q, out_q, opts):
                 link.request_config()
             elif c[0] == "view":
                 view_on = bool(c[1])
+            elif c[0] == "rescan":
+                rescan = True
             elif c[0] == "stop":
                 running = False
 
@@ -69,9 +76,18 @@ def _run(cmd_q, out_q, opts):
                                                    config=link.config), frames))
         handle_cmds()
 
+    def idle(seconds):
+        """Keep the link/GUI traffic alive while there is no camera."""
+        nonlocal rescan
+        end = time.perf_counter() + seconds
+        while running and time.perf_counter() < end and not rescan:
+            emit(None)
+            time.sleep(0.05)
+        rescan = False
+
     try:
         if opts.get("synthetic"):
-            out_q.put(("status", "synthetic triangle wave (no camera)"))
+            out_q.put(("camera", "tracking", "synthetic triangle wave (no camera)"))
             t0 = time.perf_counter()
             next_t = t0
             period = 1.0 / opts.get("fps", 100)
@@ -84,27 +100,49 @@ def _run(cmd_q, out_q, opts):
                 dt = next_t - time.perf_counter()
                 if dt > 0:
                     time.sleep(dt)
-        else:
-            import calibrate
-            import tracker as trk
+            return
 
-            out_q.put(("status", "opening PS3 Eye ..."))
-            cam = calibrate.open_camera(opts.get("id", 0), opts.get("fps", 100))
+        import calibrate
+        import tracker as trk
+        import cv2
+        from pseyepy import cam_count
+
+        while running:
+            # --- find the camera ---
+            try:
+                n = cam_count()
+            except Exception as e:
+                n = 0
+                out_q.put(("camera", "error", f"cam_count: {e!r}"))
+            if n < 1:
+                out_q.put(("camera", "missing", "PS3 Eye bulunamadı (libusbK, Interface 0)"))
+                idle(CAMERA_RETRY_S)
+                continue
+
+            out_q.put(("camera", "opening", f"{n} PS3 Eye"))
+            try:
+                cam = calibrate.open_camera(opts.get("id", 0), opts.get("fps", 100))
+            except Exception as e:
+                out_q.put(("camera", "missing", f"açılamadı: {e}"))
+                idle(CAMERA_RETRY_S)
+                continue
+
             try:
                 if opts.get("skip_calibration"):
                     calib_dict = trk.load_calibration(opts["calibration_path"])
                     trk.apply_calibration_to_camera(cam, calib_dict)
-                    out_q.put(("status", f"reusing calibration from {calib_dict['created']} (dev only)"))
+                    out_q.put(("camera", "calibrating", f"kayıtlı kalibrasyon {calib_dict.get('created', '?')}"))
                 else:
-                    out_q.put(("status", "calibration wizard running -- see the OpenCV window"))
+                    out_q.put(("camera", "calibrating", "sihirbaz açık -- OpenCV penceresi"))
                     calib = calibrate.run(cam, opts.get("beam_cm", 45.0), opts.get("scale", 2), opts["calibration_path"])
                     if calib is None or not calib.validation or not calib.validation.get("passed"):
-                        out_q.put(("status", "calibration aborted or failed"))
-                        return
+                        out_q.put(("camera", "error", "kalibrasyon iptal edildi veya geçmedi -- Yeniden tara ile tekrar"))
+                        cam.end()
+                        idle(3600)  # wait for a rescan
+                        continue
                     calib_dict = calib.to_dict()
-                out_q.put(("status", f"tracking (calibration {calib_dict.get('created', '?')})"))
+                out_q.put(("camera", "tracking", f"kalibrasyon {calib_dict.get('created', '?')}"))
                 tr = trk.BallTracker(calib_dict)
-                import cv2
                 n = 0
                 while running:
                     frame, _ = cam.read(timestamp=True)
@@ -117,8 +155,15 @@ def _run(cmd_q, out_q, opts):
                         ok, buf = cv2.imencode(".jpg", view, [cv2.IMWRITE_JPEG_QUALITY, 80])
                         if ok:
                             out_q.put(("image", buf.tobytes()))
-            finally:
-                cam.end()
+            except Exception as e:
+                out_q.put(("camera", "error", f"{e!r} -- yeniden deneniyor"))
+                try:
+                    cam.end()
+                except Exception:
+                    pass
+                idle(CAMERA_RETRY_S)
+                continue
+            cam.end()
     except Exception as e:
         out_q.put(("status", f"camera process error: {e!r}"))
     finally:
@@ -127,9 +172,10 @@ def _run(cmd_q, out_q, opts):
 
 
 class LinkProxy(QObject):
-    """GUI-side handle: same surface as EspLink + CameraThread, fed from the queues."""
+    """GUI-side handle: same surface as EspLink + the camera, fed from the queues."""
 
     status = Signal(str)
+    camera_state = Signal(str, str)  # state, detail
     position = Signal(float, bool, bool, float)
     image = Signal(bytes)  # JPEG of the tracker view
 
@@ -145,6 +191,8 @@ class LinkProxy(QObject):
         self.frames = 0
         self._frames = []
         self.events = []
+        self.cam_state = "starting"
+        self.cam_detail = ""
 
     def start(self):
         self.proc.start()
@@ -171,6 +219,9 @@ class LinkProxy(QObject):
             elif kind == "event":
                 self.events.append((m[1], m[2]))
                 self.status.emit(f"ESP32 {m[1]} ({m[2]})")
+            elif kind == "camera":
+                self.cam_state, self.cam_detail = m[1], m[2]
+                self.camera_state.emit(m[1], m[2])
             elif kind == "image":
                 self.image.emit(m[1])
             elif kind == "batch":
@@ -210,6 +261,5 @@ class LinkProxy(QObject):
     def set_view(self, on):
         self.cmd_q.put(("view", bool(on)))
 
-    # CameraThread compatibility for MainWindow.closeEvent
-    def wait(self, ms=0):
-        self.proc.join(timeout=ms / 1000)
+    def rescan(self):
+        self.cmd_q.put(("rescan",))

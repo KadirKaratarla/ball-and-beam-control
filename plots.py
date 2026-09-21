@@ -28,7 +28,7 @@ class Ring:
 class Plots(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        pg.setConfigOptions(antialias=False, background="w", foreground="k")
+        pg.setConfigOptions(antialias=False, background=(24, 28, 33), foreground=(200, 205, 214))
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
 
@@ -36,20 +36,20 @@ class Plots(QWidget):
         self.p_x.addLegend(offset=(10, 5))
         self.p_x.setYRange(0, 45)
         self.c_x = self.p_x.plot(pen=pg.mkPen((255, 140, 0), width=2), name="x")
-        self.c_xs = self.p_x.plot(pen=pg.mkPen((200, 30, 30), width=1, style=pg.QtCore.Qt.DashLine), name="setpoint")
+        self.c_xs = self.p_x.plot(pen=pg.mkPen((255, 200, 120), width=1, style=pg.QtCore.Qt.DashLine), name="setpoint")
 
         self.p_th = pg.PlotWidget(title="Beam açısı komutu ve PID terimleri (°)")
         self.p_th.addLegend(offset=(10, 5))
         self.p_th.setYRange(-3.5, 3.5)
-        self.c_th = self.p_th.plot(pen=pg.mkPen((30, 30, 30), width=2), name="θ")
-        self.c_p = self.p_th.plot(pen=pg.mkPen((30, 120, 220), width=1), name="P")
-        self.c_i = self.p_th.plot(pen=pg.mkPen((30, 160, 60), width=1), name="I")
-        self.c_d = self.p_th.plot(pen=pg.mkPen((160, 60, 200), width=1), name="D")
+        self.c_th = self.p_th.plot(pen=pg.mkPen((235, 235, 235), width=2), name="θ")
+        self.c_p = self.p_th.plot(pen=pg.mkPen((90, 160, 255), width=1), name="P")
+        self.c_i = self.p_th.plot(pen=pg.mkPen((110, 220, 120), width=1), name="I")
+        self.c_d = self.p_th.plot(pen=pg.mkPen((200, 130, 255), width=1), name="D")
 
         self.p_enc = pg.PlotWidget(title="Krank (encoder, ° yataydan) ve takip hatası (sayım)")
         self.p_enc.addLegend(offset=(10, 5))
-        self.c_enc = self.p_enc.plot(pen=pg.mkPen((30, 30, 30), width=1), name="krank °")
-        self.c_fol = self.p_enc.plot(pen=pg.mkPen((220, 60, 60), width=1), name="takip")
+        self.c_enc = self.p_enc.plot(pen=pg.mkPen((235, 235, 235), width=1), name="krank °")
+        self.c_fol = self.p_enc.plot(pen=pg.mkPen((255, 110, 110), width=1), name="takip")
 
         for p in (self.p_x, self.p_th, self.p_enc):
             p.showGrid(x=True, y=True, alpha=0.3)
