@@ -43,6 +43,10 @@ void control_get_config(proto_config_t *out)
     out->irun = STEP_TMC_IRUN;
     out->ihold = STEP_TMC_IHOLD;
     out->defaults = s_gains_default ? 1 : 0;
+    out->kp_def = PID_KP;
+    out->ki_def = PID_KI;
+    out->kd_def = PID_KD;
+    out->d_tau_def = PID_D_TAU_S;
 }
 
 static gptimer_handle_t s_timer;
@@ -204,7 +208,8 @@ static void control_task(void *arg)
                     break;
                 case PROTO_MODE_RUN:
                     level_only = false;
-                    break;
+                    if (state != CTRL_STATE_STOP && state != CTRL_STATE_FAULT) break;
+                    // fall through: RUN from STOP/FAULT re-engages like RESET_FAULT
                 case PROTO_MODE_RESET_FAULT:
                     if (state == CTRL_STATE_FAULT || state == CTRL_STATE_STOP) {
                         // Re-engage from wherever the crank came to rest: the
@@ -249,6 +254,14 @@ static void control_task(void *arg)
                 stepper_enable(true); // near 6: low load
                 engaged_at_us = t0;
                 enc_at_engage = enc.pos_counts;
+                // Fresh position reference: the pulse counter, the held and
+                // requested targets and the lag correction all restart here
+                // (a re-engage after STOP/FAULT otherwise inherits the old
+                // pulse count and trips FOLLOW_ERR at once).
+                stepper_halt();
+                stepper_reset_position();
+                held_usteps = 0;
+                lag_comp = 0.0f;
                 target_usteps = 0; // hold still while the rotor snaps to its pole
                 stepper_set_limits(STEP_VMAX_ENGAGE, STEP_AMAX_ENGAGE);
                 theta_cmd = 0.0f;

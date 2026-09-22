@@ -44,6 +44,9 @@ float stepper_track(int32_t target_usteps);
 // Immediately stops pulses and zeroes the velocity (no ramp). For faults.
 void stepper_halt(void);
 
+// Zeroes the pulse counter (new position reference, e.g. at re-engage).
+void stepper_reset_position(void);
+
 float stepper_get_velocity(void);
 
 // Pulses emitted so far, signed, + toward 12 (PCNT).
