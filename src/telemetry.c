@@ -25,6 +25,7 @@ static const char *state_name(uint8_t s)
     case CTRL_STATE_RUN: return "RUN";
     case CTRL_STATE_FAULT: return "FAULT";
     case CTRL_STATE_STOP: return "STOP";
+    case CTRL_STATE_OPENLOOP: return "OPEN";
     default: return "?";
     }
 }

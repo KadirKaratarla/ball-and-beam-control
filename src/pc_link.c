@@ -144,9 +144,17 @@ static void handle_frame(uint8_t type, const uint8_t *payload, uint8_t len)
     case PROTO_T_MODE: {
         if (len != sizeof(proto_mode_t)) { ack(type, PROTO_ACK_BAD_LEN, 0); return; }
         uint8_t m = ((const proto_mode_t *)payload)->mode;
-        if (m > PROTO_MODE_RESET_FAULT) { ack(type, PROTO_ACK_OUT_OF_RANGE, 0); return; }
+        if (m > PROTO_MODE_OPENLOOP) { ack(type, PROTO_ACK_OUT_OF_RANGE, 0); return; }
         cmd.type = PC_CMD_MODE;
         cmd.u.mode = m;
+        break;
+    }
+    case PROTO_T_THETA: {
+        if (len != sizeof(proto_theta_t)) { ack(type, PROTO_ACK_BAD_LEN, 0); return; }
+        float th = ((const proto_theta_t *)payload)->theta_0p01deg * 0.01f;
+        if (th < -OPENLOOP_THETA_MAX_DEG || th > OPENLOOP_THETA_MAX_DEG) { ack(type, PROTO_ACK_OUT_OF_RANGE, 0); return; }
+        cmd.type = PC_CMD_THETA;
+        cmd.u.theta_deg = th;
         break;
     }
     case PROTO_T_PING: {

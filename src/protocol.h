@@ -24,6 +24,7 @@
 #define PROTO_T_MODE 0x22       // proto_mode_t
 #define PROTO_T_PING 0x23       // proto_ping_t -> ACK with the same nonce
 #define PROTO_T_GET_CONFIG 0x24 // no payload -> CONFIG
+#define PROTO_T_THETA 0x25      // proto_theta_t, open-loop beam angle
 
 // --- ESP -> PC ---------------------------------------------------------------
 #define PROTO_T_TELEM 0x10  // proto_telem_t, every TELEM_BIN_DECIMATION ticks
@@ -43,6 +44,7 @@
 #define PROTO_MODE_LEVEL 1       // hold the beam level, ignore the ball
 #define PROTO_MODE_STOP 2        // pulses off, driver off (beam drops to 6)
 #define PROTO_MODE_RESET_FAULT 3 // leave FAULT/STOP, re-engage
+#define PROTO_MODE_OPENLOOP 4    // autotune: beam angle from THETA commands
 
 // POS flags
 #define PROTO_POS_VALID 0x01
@@ -75,6 +77,13 @@ typedef struct __attribute__((packed)) {
 typedef struct __attribute__((packed)) {
     uint32_t nonce;
 } proto_ping_t;
+
+// Open-loop beam angle (MODE_OPENLOOP only). The firmware levels the beam
+// if no THETA arrives within OPENLOOP_TIMEOUT_MS, so a stalled PC or a
+// dropped link cannot leave it tilted.
+typedef struct __attribute__((packed)) {
+    int16_t theta_0p01deg;
+} proto_theta_t;
 
 typedef struct __attribute__((packed)) {
     uint32_t t_ms;

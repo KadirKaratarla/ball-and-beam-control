@@ -14,6 +14,7 @@ typedef enum {
     CTRL_STATE_RUN = 3,        // closed loop on the ball position
     CTRL_STATE_FAULT = 4,      // latched, driver off
     CTRL_STATE_STOP = 5,       // stopped by command, driver off
+    CTRL_STATE_OPENLOOP = 6,   // autotune: beam angle straight from THETA
 } ctrl_state_t;
 
 typedef enum {

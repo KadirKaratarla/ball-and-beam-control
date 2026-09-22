@@ -142,6 +142,7 @@ static void control_task(void *arg)
     int32_t held_usteps = 0;
     int64_t engaged_at_us = 0;
     uint8_t last_seq = 0;
+    int64_t last_theta_us = 0;      // arrival of the last THETA command
     int64_t last_frame_us = 0;      // arrival time of the last frame fed to the PID
     int64_t ball_seen_us = 0;       // last time a valid ball position arrived
 
@@ -191,6 +192,13 @@ static void control_task(void *arg)
                 pid.integral = 0.0f; // new gains start from a clean integral
                 s_gains_default = false;
                 break;
+            case PC_CMD_THETA:
+                // Only honoured in OPENLOOP; the timestamp feeds the watchdog.
+                if (state == CTRL_STATE_OPENLOOP) {
+                    theta_cmd = cmd.u.theta_deg;
+                    last_theta_us = t0;
+                }
+                break;
             case PC_CMD_MODE:
                 switch (cmd.u.mode) {
                 case PROTO_MODE_STOP:
@@ -201,15 +209,32 @@ static void control_task(void *arg)
                     }
                     break;
                 case PROTO_MODE_LEVEL:
-                    if (state == CTRL_STATE_RUN) {
+                    if (state == CTRL_STATE_RUN || state == CTRL_STATE_OPENLOOP) {
                         state = CTRL_STATE_LEVEL_HOLD;
+                        theta_cmd = 0.0f;
                     }
                     level_only = true;
                     break;
+                case PROTO_MODE_OPENLOOP:
+                    // Autotune drives the beam directly. Only from a state
+                    // where the driver is already engaged and healthy.
+                    if (state == CTRL_STATE_RUN || state == CTRL_STATE_LEVEL_HOLD) {
+                        theta_cmd = 0.0f;
+                        last_theta_us = t0;
+                        state = CTRL_STATE_OPENLOOP;
+                    }
+                    break;
                 case PROTO_MODE_RUN:
                     level_only = false;
+                    if (state == CTRL_STATE_OPENLOOP) {
+                        pid_reset(&pid);
+                        last_frame_us = 0;
+                        theta_cmd = 0.0f;
+                        state = CTRL_STATE_LEVEL_HOLD;
+                        break;
+                    }
                     if (state != CTRL_STATE_STOP && state != CTRL_STATE_FAULT) break;
-                    // fall through: RUN from STOP/FAULT re-engages like RESET_FAULT
+                    __attribute__((fallthrough)); // RUN from STOP/FAULT re-engages like RESET_FAULT
                 case PROTO_MODE_RESET_FAULT:
                     if (state == CTRL_STATE_FAULT || state == CTRL_STATE_STOP) {
                         // Re-engage from wherever the crank came to rest: the
@@ -317,6 +342,16 @@ static void control_task(void *arg)
             }
             break;
 
+        case CTRL_STATE_OPENLOOP:
+            // Watchdog: a silent PC must not leave the beam tilted. The ball
+            // going missing is not fatal here -- the tuner may be measuring
+            // with no ball -- but a stale link is.
+            if (t0 - last_theta_us > (int64_t)OPENLOOP_TIMEOUT_MS * 1000 || stale) {
+                theta_cmd = 0.0f;
+            }
+            target_usteps = crank_target_usteps(theta_cmd, enc_at_engage, &phi_cmd);
+            break;
+
         case CTRL_STATE_FAULT:
         case CTRL_STATE_STOP:
             break;
@@ -326,19 +361,21 @@ static void control_task(void *arg)
         // 4. actuate (deadband in RUN, encoder lag correction in LEVEL/RUN)
         {
             int32_t delta = target_usteps - held_usteps;
-            if (state != CTRL_STATE_RUN || delta >= CRANK_CMD_DEADBAND_USTEPS || delta <= -CRANK_CMD_DEADBAND_USTEPS) {
+            if ((state != CTRL_STATE_RUN && state != CTRL_STATE_OPENLOOP) ||
+                delta >= CRANK_CMD_DEADBAND_USTEPS || delta <= -CRANK_CMD_DEADBAND_USTEPS) {
                 held_usteps = target_usteps;
             }
         }
-        if ((state == CTRL_STATE_LEVEL_HOLD || state == CTRL_STATE_RUN) && enc.ok &&
-            stepper_get_velocity() == 0.0f) {
+        if ((state == CTRL_STATE_LEVEL_HOLD || state == CTRL_STATE_RUN ||
+             state == CTRL_STATE_OPENLOOP) && enc.ok && stepper_get_velocity() == 0.0f) {
             float target_counts = enc_at_engage + (float)held_usteps / STEP_USTEPS_PER_COUNT;
             lag_comp += (target_counts - enc.pos_counts) * (CONTROL_LOOP_PERIOD_US / 1e6f / LAG_COMP_TAU_S);
             if (lag_comp > LAG_COMP_MAX_COUNTS) lag_comp = LAG_COMP_MAX_COUNTS;
             if (lag_comp < -LAG_COMP_MAX_COUNTS) lag_comp = -LAG_COMP_MAX_COUNTS;
         }
         int32_t applied = held_usteps + (int32_t)(lag_comp * STEP_USTEPS_PER_COUNT);
-        bool driving = state == CTRL_STATE_ENGAGE || state == CTRL_STATE_LEVEL_HOLD || state == CTRL_STATE_RUN;
+        bool driving = state == CTRL_STATE_ENGAGE || state == CTRL_STATE_LEVEL_HOLD ||
+                       state == CTRL_STATE_RUN || state == CTRL_STATE_OPENLOOP;
         float vel = driving ? stepper_track(applied) : 0.0f;
         int64_t t3 = esp_timer_get_time();
 

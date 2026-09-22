@@ -116,6 +116,10 @@
 #define PID_KP_MAX 3.0f
 #define PID_KI_MAX 1.0f
 #define PID_KD_MAX 2.0f
+// Open-loop (autotune) angle limit and the watchdog that levels the beam
+// when the PC stops sending THETA.
+#define OPENLOOP_THETA_MAX_DEG 2.0f
+#define OPENLOOP_TIMEOUT_MS 500
 #define PID_KP 0.74f             // deg per cm
 #define PID_KI 0.15f             // deg per cm*s; first run held 1 cm off the setpoint with Ki=0
 #define PID_KD 0.34f             // deg per cm/s

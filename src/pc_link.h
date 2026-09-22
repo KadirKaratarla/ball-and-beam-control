@@ -38,6 +38,7 @@ typedef enum {
     PC_CMD_SETPOINT,
     PC_CMD_GAINS,
     PC_CMD_MODE,
+    PC_CMD_THETA,
 } pc_cmd_type_t;
 
 typedef struct {
@@ -46,6 +47,7 @@ typedef struct {
         float setpoint_cm;
         struct { float kp, ki, kd, d_tau_s; } gains;
         uint8_t mode;
+        float theta_deg;
     } u;
 } pc_cmd_t;
 
