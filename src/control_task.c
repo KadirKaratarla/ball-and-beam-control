@@ -168,6 +168,12 @@ static void control_task(void *arg)
             if (ball_valid) ball_seen_us = link.received_at_us;
         }
         bool ball_lost = stale || (t0 - ball_seen_us) > (int64_t)GUARD_BALL_LOST_MS * 1000;
+        // Report the position in every state (the PID still only consumes it
+        // in RUN): telemetry used to freeze the last RUN value, which left
+        // the autotuner's open-loop experiments blind.
+        if (new_frame && ball_valid) {
+            x_cm = link.pos_0p1mm * 0.01f;
+        }
 
         int32_t step_count = stepper_get_step_count();
         float cmd_pos = (float)step_count / STEP_USTEPS_PER_COUNT;
@@ -332,7 +338,6 @@ static void control_task(void *arg)
                 break;
             }
             if (new_frame && ball_valid) {
-                x_cm = link.pos_0p1mm * 0.01f;
                 float dt = last_frame_us ? (link.received_at_us - last_frame_us) * 1e-6f : PID_DT_NOMINAL_S;
                 if (dt < 0.005f) dt = 0.005f;
                 if (dt > 0.050f) dt = 0.050f;
