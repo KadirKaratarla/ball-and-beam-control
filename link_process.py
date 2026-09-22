@@ -52,6 +52,8 @@ def _run(cmd_q, out_q, opts):
                 link.set_gains(c[1], c[2], c[3], c[4])
             elif c[0] == "mode":
                 link.set_mode(c[1])
+            elif c[0] == "theta":
+                link.set_theta(c[1])
             elif c[0] == "ping":
                 link.ping()
             elif c[0] == "config":
@@ -251,6 +253,9 @@ class LinkProxy(QObject):
 
     def set_mode(self, mode):
         self.cmd_q.put(("mode", mode))
+
+    def set_theta(self, theta_deg):
+        self.cmd_q.put(("theta", theta_deg))
 
     def ping(self):
         self.cmd_q.put(("ping",))

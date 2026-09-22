@@ -229,6 +229,11 @@ class EspLink:
     def set_mode(self, mode):
         return self._write(P.pack_mode(mode))
 
+    def set_theta(self, theta_deg):
+        """Open-loop beam angle (MODE_OPENLOOP); the firmware levels the
+        beam if these stop arriving."""
+        return self._write(P.pack_theta(theta_deg))
+
     def ping(self):
         nonce = int(time.perf_counter() * 1e6) & 0xFFFFFFFF
         self._pending_pings[nonce] = time.perf_counter()

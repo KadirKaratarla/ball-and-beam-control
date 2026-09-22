@@ -14,6 +14,7 @@ VERSION = 1
 
 # PC -> ESP
 T_POS, T_SETPOINT, T_GAINS, T_MODE, T_PING, T_GET_CONFIG = 0x01, 0x20, 0x21, 0x22, 0x23, 0x24
+T_THETA = 0x25
 # ESP -> PC
 T_TELEM, T_HEALTH, T_ACK, T_CONFIG = 0x10, 0x11, 0x12, 0x13
 
@@ -21,12 +22,13 @@ ACK_OK, ACK_BAD_LEN, ACK_OUT_OF_RANGE, ACK_UNKNOWN_TYPE, ACK_REJECTED = range(5)
 ACK_NAMES = {ACK_OK: "ok", ACK_BAD_LEN: "bad_len", ACK_OUT_OF_RANGE: "out_of_range",
              ACK_UNKNOWN_TYPE: "unknown_type", ACK_REJECTED: "rejected"}
 
-MODE_RUN, MODE_LEVEL, MODE_STOP, MODE_RESET_FAULT = range(4)
+MODE_RUN, MODE_LEVEL, MODE_STOP, MODE_RESET_FAULT, MODE_OPENLOOP = range(5)
+OPENLOOP_THETA_MAX_DEG = 2.0
 
 POS_VALID, POS_WARNING = 0x01, 0x02
 TF_BALL_VALID, TF_LINK_STALE, TF_DRIVER_ON = 0x01, 0x02, 0x04
 
-STATE_NAMES = {0: "WAIT", 1: "ENGAGE", 2: "LEVEL", 3: "RUN", 4: "FAULT", 5: "STOP"}
+STATE_NAMES = {0: "WAIT", 1: "ENGAGE", 2: "LEVEL", 3: "RUN", 4: "FAULT", 5: "STOP", 6: "OPEN"}
 FAULT_NAMES = {0: "none", 1: "ENC_RANGE", 2: "FOLLOW_ERR", 3: "ENC_DEAD", 4: "TMC_RESET", 5: "TMC_UART", 6: "NOT_AT_REST"}
 
 # --- payload layouts (struct format, field names) ---------------------------
@@ -35,6 +37,7 @@ SETPOINT_FMT = "<h"
 GAINS_FMT = "<ffff"
 MODE_FMT = "<B"
 PING_FMT = "<I"
+THETA_FMT = "<h"
 
 TELEM_FMT = "<IhhhhhhhhhbBBBBHh"
 Telem = namedtuple("Telem", "t_ms x_0p1mm x_set_0p1mm p i d theta phi_0p1deg enc_counts "
@@ -95,6 +98,10 @@ def pack_gains(kp, ki, kd, d_tau_s):
 
 def pack_mode(mode):
     return frame(T_MODE, struct.pack(MODE_FMT, mode))
+
+
+def pack_theta(theta_deg):
+    return frame(T_THETA, struct.pack(THETA_FMT, int(round(theta_deg * 100))))
 
 
 def pack_ping(nonce):
