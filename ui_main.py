@@ -157,7 +157,7 @@ class MainWindow(QMainWindow):
 
         # schematic / camera in one fixed slot
         self.stack = QStackedWidget()
-        self.stack.setFixedHeight(230)
+        self.stack.setFixedHeight(190)
         self.beam = BeamView(beam_cm)
         self.beam.setpoint_clicked.connect(self.send_setpoint)
         self.cam_view = QLabel("kamera görüntüsü bekleniyor")
