@@ -83,7 +83,10 @@ void app_main(void)
         ESP_LOGE(TAG, "encoder not answering -- starting in FAULT");
         initial = FAULT_ENC_DEAD;
     } else if (stepper_init() != ESP_OK) {
-        ESP_LOGE(TAG, "stepper/TMC2208 init failed -- starting in FAULT");
+        // Almost always the 12 V supply: the driver's UART stays silent.
+        // Recoverable -- RESET_FAULT / RUN retries the whole bring-up.
+        ESP_LOGE(TAG, "TMC2208 cevap vermiyor (12 V kapali?) -- FAULT ile basliyor, "
+                      "besleme gelince RUN/RESET_FAULT yeniden dener");
         initial = FAULT_TMC_UART;
     }
     // The rest-at-6 check (K-019) happens in the control task before it

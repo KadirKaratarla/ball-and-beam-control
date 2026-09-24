@@ -15,8 +15,14 @@
 #include "esp_err.h"
 
 // TMC UART bring-up with read-back verification, LEDC and PCNT setup.
-// Leaves the driver DISABLED and pulses off.
+// Leaves the driver DISABLED and pulses off. Safe to call again after a
+// failure (no 12 V at boot, say): it retries from scratch and returns
+// ESP_OK immediately once it has succeeded.
 esp_err_t stepper_init(void);
+
+// False until init has succeeded; every other entry point is a no-op
+// while it is false.
+bool stepper_is_ready(void);
 
 // Writes GCONF / CHOPCONF / IHOLD_IRUN and reads them back. Used at init
 // and by the diag task after a driver reset. Only call from one task at a

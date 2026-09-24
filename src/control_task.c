@@ -243,6 +243,17 @@ static void control_task(void *arg)
                     __attribute__((fallthrough)); // RUN from STOP/FAULT re-engages like RESET_FAULT
                 case PROTO_MODE_RESET_FAULT:
                     if (state == CTRL_STATE_FAULT || state == CTRL_STATE_STOP) {
+                        // The driver may never have come up (no 12 V at boot)
+                        // or may have been reset; give the hardware another
+                        // go before re-engaging, and re-arm the watchdog.
+                        if (!stepper_is_ready() && stepper_init() != ESP_OK) {
+                            ESP_LOGW(TAG, "TMC2208 hala cevap vermiyor -- 12 V baglantisini kontrol edin");
+                            break;
+                        }
+                        if (stepper_is_ready() && !stepper_configure_tmc()) {
+                            break;
+                        }
+                        diag_clear_driver();
                         // Re-engage from wherever the crank came to rest: the
                         // beam dropped toward 6 when the driver went off.
                         fault = FAULT_NONE;

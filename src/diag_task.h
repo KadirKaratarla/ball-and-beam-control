@@ -19,3 +19,7 @@ typedef struct {
 
 void diag_start(void);
 const diag_state_t *diag_get(void);
+
+// Re-arm after the operator has cleared a fault: the TMC gets another
+// chance to answer (it stays silent while the 12 V supply is off).
+void diag_clear_driver(void);

@@ -71,6 +71,11 @@ void diag_start(void)
              LINK_POLL_PERIOD_MS, DIAG_PERIOD_MS, TASK_AUX_CORE);
 }
 
+void diag_clear_driver(void)
+{
+    s_state.driver_ok = true;
+}
+
 const diag_state_t *diag_get(void)
 {
     return &s_state;

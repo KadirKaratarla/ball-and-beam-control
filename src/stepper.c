@@ -29,6 +29,10 @@ static float s_vel;          // usteps/s, signed, currently generated
 static uint32_t s_freq_hz;   // 0 = pulses off
 static int s_dir_level = -1; // last level written to DIR
 static bool s_enabled;
+// Until init has succeeded (no 12 V -> the TMC does not answer), every entry
+// point is a no-op: the control task used to call into an uninitialised PCNT
+// 250 times a second, and the resulting error flood swamped the console.
+static bool s_ready;
 static float s_vmax = STEP_VMAX;
 static float s_amax = STEP_AMAX;
 static float s_dv_max = STEP_AMAX * (CONTROL_LOOP_PERIOD_US / 1e6f);
@@ -87,8 +91,16 @@ static void pulses_set(uint32_t hz, int dir_level)
     }
 }
 
+bool stepper_is_ready(void)
+{
+    return s_ready;
+}
+
 esp_err_t stepper_init(void)
 {
+    if (s_ready) {
+        return ESP_OK;
+    }
     gpio_config_t io = {
         .pin_bit_mask = (1ULL << PIN_TMC_STEP) | (1ULL << PIN_TMC_DIR) | (1ULL << PIN_TMC_EN),
         .mode = GPIO_MODE_INPUT_OUTPUT, // STEP/DIR also feed PCNT
@@ -159,6 +171,13 @@ esp_err_t stepper_init(void)
     ESP_RETURN_ON_ERROR(pcnt_unit_clear_count(s_pcnt), TAG, "pcnt clear");
     ESP_RETURN_ON_ERROR(pcnt_unit_start(s_pcnt), TAG, "pcnt start");
 
+    // Driver logs from the control path must be silent (K-022/K-025): a
+    // single line inside the loop costs milliseconds.
+    esp_log_level_set("pcnt", ESP_LOG_NONE);
+    esp_log_level_set("ledc", ESP_LOG_NONE);
+    esp_log_level_set("gptimer", ESP_LOG_NONE);
+
+    s_ready = true;
     ESP_LOGI(TAG, "LEDC step on GPIO%d (10 bit, %d..%d Hz), PCNT loop-back with DIR on GPIO%d",
              PIN_TMC_STEP, STEP_VMIN_HZ, (int)STEP_VMAX, PIN_TMC_DIR);
     return ESP_OK;
@@ -166,6 +185,7 @@ esp_err_t stepper_init(void)
 
 void stepper_enable(bool on)
 {
+    if (!s_ready) return;
     gpio_set_level(PIN_TMC_EN, on ? 0 : 1);
     s_enabled = on;
 }
@@ -184,6 +204,7 @@ void stepper_set_limits(float vmax, float amax)
 
 float stepper_tick(float target)
 {
+    if (!s_ready) return 0.0f;
     if (target > s_vmax) target = s_vmax;
     if (target < -s_vmax) target = -s_vmax;
 
@@ -204,6 +225,7 @@ float stepper_tick(float target)
 
 float stepper_track(int32_t target_usteps)
 {
+    if (!s_ready) return 0.0f;
     int32_t e = target_usteps - stepper_get_step_count();
     int32_t mag = e < 0 ? -e : e;
     if (mag <= 8) { // 8 usteps = 0.06 deg: close enough, stop
@@ -221,12 +243,14 @@ float stepper_track(int32_t target_usteps)
 
 void stepper_halt(void)
 {
+    if (!s_ready) return;
     pulses_off();
     s_vel = 0;
 }
 
 void stepper_reset_position(void)
 {
+    if (!s_ready) return;
     pcnt_unit_clear_count(s_pcnt);
 }
 
@@ -237,6 +261,7 @@ float stepper_get_velocity(void)
 
 int32_t stepper_get_step_count(void)
 {
+    if (!s_ready) return 0;
     int count = 0;
     pcnt_unit_get_count(s_pcnt, &count);
     return count;
