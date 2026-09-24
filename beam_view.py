@@ -9,7 +9,7 @@ from PySide6.QtCore import Qt, QPointF, QRectF, Signal
 from PySide6.QtGui import QColor, QPainter, QPen, QBrush, QFont, QRadialGradient, QPainterPath
 from PySide6.QtWidgets import QWidget
 
-THETA_FULL_DEG = 3.2  # the firmware's limit; the drawing scales the tilt so
+THETA_FULL_DEG = 3.13  # the firmware's limit; the drawing scales the tilt so
                       # that this maximum exactly fills the space available
 # The displayed angle follows theta through a first-order filter: the command
 # itself dithers by ~0.1 deg from camera noise, which the exaggeration turns
