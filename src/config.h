@@ -99,10 +99,12 @@
 #define ENC_LEVEL_COUNTS 1101
 
 // Beam angle limit. The 90 mm rod tilts as the pin swings, so the exact
-// curve is asymmetric: theta(-90) = -4.33, theta(+90) = +3.09 with a peak
-// of +3.26 at phi = +75 (test_pid_sim table). Past the peak the gain
-// reverses, so stay well inside: 3.0 deg <-> crank about +57 / -52 deg.
-#define BEAM_THETA_MAX_DEG 3.0f
+// curve is asymmetric and peaks at +3.265 deg (crank +75.5); past the peak
+// more crank gives *less* tilt, so the sign of the loop gain flips and the
+// controller would fight itself. The limit keeps a 4% margin below that
+// peak (user's call, was 8%): 3.13 deg <-> crank +62.4 / -54.4 deg, i.e.
+// 32.1 cm/s^2 of ball acceleration.
+#define BEAM_THETA_MAX_DEG 3.13f
 
 // ---------------------------------------------------------------------------
 // Ball controller (Faz 3). Plant: x'' = (5/7) g sin(theta) ~ 700 theta cm/s^2
@@ -116,9 +118,10 @@
 #define PID_KP_MAX 3.0f
 #define PID_KI_MAX 1.0f
 #define PID_KD_MAX 2.0f
-// Open-loop (autotune) angle limit and the watchdog that levels the beam
-// when the PC stops sending THETA.
-#define OPENLOOP_THETA_MAX_DEG 2.0f
+// Open-loop (diagnostic) angle limit and the watchdog that levels the beam
+// when the PC stops sending THETA. Same ceiling as the closed loop: the
+// crank clamp and every guard still apply on top of it.
+#define OPENLOOP_THETA_MAX_DEG BEAM_THETA_MAX_DEG
 #define OPENLOOP_TIMEOUT_MS 500
 #define PID_KP 0.74f             // deg per cm
 #define PID_KI 0.15f             // deg per cm*s; first run held 1 cm off the setpoint with Ki=0
@@ -134,9 +137,11 @@
 // 6 -> level (1101 counts, 97 deg) at a moderate speed, not the closed-loop one.
 #define STEP_VMAX_ENGAGE 10000.0f
 #define STEP_AMAX_ENGAGE 100000.0f
-// Hard clamp on the crank command around level, whatever the linkage says
-// (theta max 3.0 deg is ~650 counts; the +theta peak is at ~850).
-#define CRANK_CMD_MAX_COUNTS 650
+// Hard clamp on the crank command around level, whatever the linkage says.
+// theta max 3.13 deg needs 709 counts on the + side; 730 leaves the clamp
+// as a backstop only, still far from the peak (860 counts) and from the
+// encoder range guard.
+#define CRANK_CMD_MAX_COUNTS 730
 // After the driver energises the rotor snaps to a pole; the shaft
 // reference is taken after this settle time.
 #define ENGAGE_SETTLE_MS 200
