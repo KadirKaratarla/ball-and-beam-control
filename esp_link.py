@@ -34,6 +34,10 @@ ESP_USB_VID = 0x303A
 ESP_USB_PID = 0x1001
 RECONNECT_S = 0.5
 PING_TIMEOUT_S = 1.0
+# The board streams telemetry continuously, so silence means the link is
+# gone even if Windows has not failed the read yet (a yanked USB device
+# often leaves a half-open handle that just returns nothing).
+RX_TIMEOUT_S = 2.0
 
 
 def find_esp_port():
@@ -53,7 +57,8 @@ class EspLink:
         self.rx = queue.Queue(maxsize=10000)
         self.parser = P.Parser()
         self.stats = dict(tx_frames=0, tx_dropped=0, rx_frames=0, rx_bytes=0, reconnects=0,
-                          rtt_ms=None, connected_at=None)
+                          rx_timeouts=0, rtt_ms=None, connected_at=None)
+        self._last_rx = 0.0
         self.config = None
         self._lock = threading.Lock()
         self._running = False
@@ -121,6 +126,7 @@ class EspLink:
                     continue
                 with self._lock:
                     self.connected = True
+                self._last_rx = time.perf_counter()
                 self.stats["connected_at"] = time.time()
                 self.stats["reconnects"] += 1
                 self.on_event("connected", self.port)
@@ -137,7 +143,11 @@ class EspLink:
                 self._close()
                 continue
             if data:
+                self._last_rx = time.perf_counter()
                 self._on_bytes(data)
+            elif self.connected and time.perf_counter() - self._last_rx > RX_TIMEOUT_S:
+                self.stats["rx_timeouts"] += 1
+                self._close()
 
     def _handshake(self):
         nonce = int(time.time() * 1000) & 0xFFFFFFFF

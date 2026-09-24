@@ -246,7 +246,8 @@ class MainWindow(QMainWindow):
                       ("tmcreset", "Reset"), ("tmcuart", "UART hataları"), ("vel", "Adım hızı"), ("drv", "DRV_STATUS")))
         tab("Link", (("pkt", "Konum paketleri"), ("crc", "CRC hataları"), ("gap", "Sıra boşlukları"),
                      ("cmd", "Komut ok / kötü"), ("txd", "ESP tx düşen"), ("recon", "Yeniden bağlanma")))
-        tab("Kamera", (("camstate", "Kamera"), ("fps", "Kare hızı"), ("camdetail", "Ayrıntı")), cols=1)
+        tab("Kamera", (("camstate", "Kamera"), ("fps", "Kare hızı"), ("camdetail", "Ayrıntı"),
+                       ("camrestart", "Yeniden başlatma")), cols=1)
         self.tabs.setMinimumHeight(150)
         left.addWidget(self.tabs, 1)
 
@@ -428,14 +429,15 @@ class MainWindow(QMainWindow):
             self._strip(self.cam_strip, f"Kamera: {self.cam_detail}", ORANGE_C)
             self.warnings.pop("cam_missing", None)
         elif cs == "missing":
-            self._strip(self.cam_strip, "KAMERA TAKILI DEĞİL -- takıp 'Yeniden tara'", RED)
-            self.warnings["cam_missing"] = ("fault", "Kamera yok: top konumu gelmiyor, ESP yatayda bekler")
+            self._strip(self.cam_strip, f"KAMERA TAKILI DEĞİL -- takın, kendiliğinden bağlanır ({self.cam_detail})", RED)
+            self.warnings["cam_missing"] = ("fault", "Kamera yok: top konumu gelmiyor, ESP beam'i yatayda tutuyor")
         elif cs == "error":
             self._strip(self.cam_strip, f"Kamera hatası: {self.cam_detail}", RED)
             self.warnings["cam_missing"] = ("fault", f"Kamera: {self.cam_detail}")
         else:
             self._strip(self.cam_strip, "Kamera aranıyor ...", GREY)
         cells["camstate"].set(cs)
+        cells["camrestart"].set(str(getattr(self.camera, "cam_restarts", 0)))
         cells["camdetail"].set(self.cam_detail)
         cells["fps"].set(f"{self.cam_rate} fps")
         cells["rtt"].set(f"{self.link.stats.get('rtt_ms') or 0:.1f} ms")
