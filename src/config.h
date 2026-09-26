@@ -123,9 +123,15 @@
 // crank clamp and every guard still apply on top of it.
 #define OPENLOOP_THETA_MAX_DEG BEAM_THETA_MAX_DEG
 #define OPENLOOP_TIMEOUT_MS 500
+// Tuned on the rig 2026-09-24 by stepping +-5 cm through a dozen gain sets
+// (docs K-028). Kd 0.34 damped too little -- zeta 0.64, 15.6% overshoot;
+// 0.50 puts zeta at 0.94 and drops the overshoot to ~2% for 0.2 s of
+// settling time. Kp above ~0.85 runs into the 45 ms loop delay (Kp 0.95
+// measured 17.8% overshoot). Ki only has to creep through the ball's dead
+// band, so it stays small: bigger values buy nothing measurable.
 #define PID_KP 0.74f             // deg per cm
-#define PID_KI 0.15f             // deg per cm*s; first run held 1 cm off the setpoint with Ki=0
-#define PID_KD 0.34f             // deg per cm/s
+#define PID_KI 0.06f             // deg per cm*s
+#define PID_KD 0.50f             // deg per cm/s
 #define PID_I_MAX_DEG 1.5f       // integral contribution clamp
 #define PID_D_TAU_S 0.15f        // derivative low-pass; 0.06 let 0.3 mm camera noise dither the crank +-1.8 deg at rest
 #define PID_DT_NOMINAL_S 0.01f   // camera frame period; the loop runs the PID per frame
