@@ -256,10 +256,10 @@ def characteristic_svg():
 
 def architecture_svg():
     W, H = 940, 496
-    s = head(W, H, "Sinyal akisi")
-    s.append(txt(24, 32, "Sinyal akışı", 15, INK, weight="600"))
-    s.append(txt(24, 52, "Konum PC'de görüntüden çıkıyor, denetim ESP32-S3'te 250 Hz'de koşuyor.",
-                 12, MUTED))
+    s = head(W, H, "Signal flow")
+    s.append(txt(24, 32, "Signal flow", 15, INK, weight="600"))
+    s.append(txt(24, 52, "The ball's position is measured on the PC from the camera image; "
+                 "the control loop runs on the ESP32-S3 at 250 Hz.", 12, MUTED))
 
     def box(x, y, w, h, title, lines, accent=INK, fill="#f6f8fa"):
         out = ["<rect x='%.1f' y='%.1f' width='%.1f' height='%.1f' rx='7' fill='%s' "
@@ -280,32 +280,188 @@ def architecture_svg():
              "markerHeight='8' orient='auto'><path d='M0,1 L9,5 L0,9' fill='%s'/></marker></defs>"
              % ACCENT)
 
-    s += box(24, 92, 196, 92, "PS3 Eye kamera",
-             ["320x240 @ 100 fps", "libusbK + pseyepy", "pozlama/kazanç sabit"])
+    s += box(24, 92, 196, 92, "PS3 Eye camera",
+             ["320x240 @ 100 fps", "libusbK + pseyepy", "fixed exposure and gain"])
     s += box(24, 232, 196, 118, "PC — Python",
-             ["tracker.py: HSV eşiği,", "ışın üzerine izdüşüm", "ui_main.py: PySide6 arayüz",
-              "kamera ve link ayrı süreçte"])
+             ["tracker.py: HSV threshold,", "projection onto the rail axis",
+              "ui_main.py: PySide6 GUI", "camera and link: own processes"])
     s += box(372, 232, 210, 118, "ESP32-S3", ["4 ms GPTimer ISR (250 Hz)",
-             "pid.c: ölçüm türevli PID", "linkage.c: θ → krank açısı",
-             "korkuluklar: θ, takip, WDT"], ACCENT, "#ddf4ff")
+             "pid.c: measurement-derivative PID", "linkage.c: θ → crank angle",
+             "guards: θ, follow error, WDT"], ACCENT, "#ddf4ff")
     s += box(716, 92, 200, 92, "AS5600 encoder",
-             ["4096 sayım/tur, 400 kHz", "LUT düzeltmesi", "makullük filtresi"])
+             ["4096 counts/rev, 400 kHz", "look-up table correction", "plausibility filter"])
     s += box(716, 232, 200, 118, "TMC2208 + NEMA 17",
-             ["1/256 mikro adım, 0,61 A", "LEDC darbe + PCNT sayım",
-              "krank r=31 → biyel l=90", "→ beam θ = ±3,13°"])
-    s += box(372, 392, 210, 56, "top — 45 cm ray", ["kapalı çevrim buradan kapanıyor"], WARN, "#fff1e5")
+             ["1/256 microstep, 0.61 A rms", "LEDC pulses + PCNT count",
+              "crank r=31 → rod l=90", "→ beam θ = ±3.13°"])
+    s += box(372, 392, 210, 56, "ball — 45 cm rail", ["the loop closes here"], WARN, "#fff1e5")
 
-    s += arrow(122, 184, 122, 232, "kare", True, MUTED)
-    s += arrow(220, 268, 372, 268, "USB ikili çerçeve", True)
+    s += arrow(122, 184, 122, 232, "frames", True, MUTED)
+    s += arrow(220, 268, 372, 268, "USB binary frames", True)
     s += arrow(372, 314, 220, 314, "TELEM 125 Hz", False)
-    s += arrow(582, 268, 716, 268, "adım / yön", True)
-    s += arrow(816, 232, 816, 184, "açı", True, MUTED)
-    s += arrow(716, 152, 582, 240, "krank φ", True, MUTED)
-    s += arrow(716, 330, 582, 410, "beam açısı", False, WARN)
-    s += arrow(372, 420, 122, 350, "topun görüntüsü", False, WARN)
+    s += arrow(582, 268, 716, 268, "step / dir", True)
+    s += arrow(816, 232, 816, 184, "shaft angle", True, MUTED)
+    s += arrow(716, 152, 582, 240, "crank φ", True, MUTED)
+    s += arrow(716, 330, 582, 410, "beam angle", False, WARN)
+    s += arrow(372, 420, 122, 350, "ball in view", False, WARN)
 
     s.append(txt(24, H - 20, "POS 100 Hz (PC→ESP) · TELEM 125 Hz + HEALTH 1 Hz (ESP→PC) · "
-                 "AA 55 | tip | uzunluk | yük ≤64 | crc8", 10.5, MUTED))
+                 "frame: AA 55 | type | len | payload ≤64 B | crc8", 10.5, MUTED))
+    s.append("</svg>")
+    return NL.join(s)
+
+
+# --- drawing 4: wiring ------------------------------------------------------
+
+def wiring_svg():
+    """Connection diagram: which pin goes where, and the three details that
+    cost the most time to get right (single-wire UART, AS5600 DIR, common
+    ground)."""
+    W, H = 1140, 750
+    RAIL = 680
+    COLL = 905                      # ground collector, right of the boxes
+    s = head(W, H, "Wiring")
+    s.append(txt(24, 32, "Wiring", 15, INK, weight="600"))
+    s.append(txt(24, 52, "Verified against the running rig. Pin numbers are the single source "
+                 "of truth in firmware/src/board_pins.h.", 12, MUTED))
+
+    def box(x, y, w, h, title, sub="", accent=INK, fill="#f6f8fa"):
+        out = ["<rect x='%.1f' y='%.1f' width='%.1f' height='%.1f' rx='7' fill='%s' "
+               "stroke='%s' stroke-width='1.6'/>" % (x, y, w, h, fill, accent)]
+        out.append(txt(x + 14, y + 24, title, 12.5, accent, weight="600"))
+        if sub:
+            out.append(txt(x + 14, y + 40, sub, 10, MUTED))
+        return out
+
+    def pin(x, y, label, side="right", color=INK):
+        """A pin label sitting just inside the box edge."""
+        dx = -10 if side == "right" else 10
+        anc = "end" if side == "right" else "start"
+        return [txt(x + dx, y + 4, label, 10.5, color, anc)]
+
+    def wire(pts, color=INK, w=1.5, dash=None):
+        d = " stroke-dasharray='%s'" % dash if dash else ""
+        p = " ".join("%.1f,%.1f" % (x, y) for x, y in pts)
+        return ["<polyline points='%s' fill='none' stroke='%s' stroke-width='%.1f' "
+                "stroke-linejoin='round' stroke-linecap='round'%s/>" % (p, color, w, d)]
+
+    def junction(x, y, color=INK):
+        return ["<circle cx='%.1f' cy='%.1f' r='3.4' fill='%s'/>" % (x, y, color)]
+
+    def resistor(x, y, label, color=INK, vertical=False):
+        """Small box on a wire, the way a schematic marks a series part."""
+        if vertical:
+            out = ["<rect x='%.1f' y='%.1f' width='14' height='34' rx='2' fill='#ffffff' "
+                   "stroke='%s' stroke-width='1.4'/>" % (x - 7, y - 17, color)]
+            out.append(txt(x + 12, y + 4, label, 10, color, "start", "600"))
+        else:
+            out = ["<rect x='%.1f' y='%.1f' width='38' height='14' rx='2' fill='#ffffff' "
+                   "stroke='%s' stroke-width='1.4'/>" % (x - 19, y - 7, color)]
+            out.append(txt(x, y - 12, label, 10, color, "middle", "600"))
+        return out
+
+    def label(x, y, text, color=ACCENT, anchor="start"):
+        return [txt(x, y, text, 10.5, color, anchor, "600")]
+
+    # ---- blocks
+    s += box(60, 100, 240, 480, "ESP32-S3 DevKitC-1", "N8 · USB-Serial-JTAG + CH343")
+    s += box(620, 110, 260, 210, "TMC2208", "UART mode · 1/256 · IRUN 10 (0.61 A rms)")
+    s += box(620, 345, 260, 135, "AS5600", "I2C 400 kHz · 4096 counts/rev")
+    s += box(620, 505, 260, 115, "HC-SR04", "backup sensor, not used")
+    s += box(950, 110, 160, 70, "12 V supply", "motor rail")
+    s += box(950, 210, 160, 90, "NEMA 17", "200 steps/rev")
+
+    # ---- ESP pins
+    esp = [(145, "3V3"), (185, "GPIO4  STEP"), (210, "GPIO5  DIR"), (235, "GPIO15  EN"),
+           (265, "GPIO6  UART TX"), (290, "GPIO7  UART RX"), (350, "GPIO8  SDA"),
+           (375, "GPIO9  SCL"), (440, "GPIO10  TRIG"), (468, "GPIO11  ECHO"),
+           (505, "5V  (USB)"), (530, "GPIO16  loop probe"), (556, "GND")]
+    for y, name in esp:
+        s += pin(300, y, name)
+
+    # ---- TMC pins
+    for y, name in ((165, "VIO 3V3"), (190, "STEP"), (212, "DIR"), (234, "EN"),
+                    (265, "PDN_UART"), (292, "CLK")):
+        s += pin(620, y, name, "left")
+    for y, name in ((140, "VM +12 V"), (250, "M1A M1B M2A M2B"), (300, "GND")):
+        s += pin(880, y, name)
+
+    # ---- AS5600 / HC-SR04 pins
+    for y, name in ((375, "VCC 3V3"), (400, "SDA"), (422, "SCL")):
+        s += pin(620, y, name, "left")
+    s += pin(880, 448, "GND")
+    s += pin(880, 465, "DIR", "right", WARN)
+    for y, name in ((528, "VCC 5V"), (550, "TRIG"), (578, "ECHO")):
+        s += pin(620, y, name, "left")
+    s += pin(880, 600, "GND")
+    for y, name in ((140, "+"), (165, "−")):
+        s += pin(950, y, name, "left")
+
+    # ---- 3V3 rail
+    s += wire([(300, 145), (330, 145), (330, 375), (620, 375)])
+    s += wire([(330, 165), (620, 165)])
+    s += junction(330, 165)
+    s += label(340, 138, "3V3", MUTED)
+
+    # ---- step / dir / enable
+    s += wire([(300, 185), (362, 185), (362, 190), (620, 190)], ACCENT)
+    s += wire([(300, 210), (378, 210), (378, 212), (620, 212)], ACCENT)
+    s += wire([(300, 235), (394, 235), (394, 234), (620, 234)], ACCENT)
+    s += label(455, 178, "LEDC square wave, counted back by PCNT", MUTED, "middle")
+    s += label(455, 252, "LOW = driver enabled", MUTED, "middle")
+
+    # ---- single-wire UART: TX through 1k, RX straight, joined at the pin
+    s += wire([(300, 265), (560, 265), (620, 265)], WARN, 1.8)
+    s += resistor(452, 265, "1 kΩ", WARN)
+    s += wire([(300, 290), (560, 290), (560, 265)], WARN, 1.8)
+    s += junction(560, 265, WARN)
+    s += label(452, 312, "single-wire half-duplex: TX through 1 kΩ, RX direct", WARN, "middle")
+
+    # ---- I2C
+    s += wire([(300, 350), (410, 350), (410, 400), (620, 400)], ACCENT)
+    s += wire([(300, 375), (426, 375), (426, 422), (620, 422)], ACCENT)
+    s += label(470, 452, "10 kΩ pull-ups on the breakout; internal ones off", MUTED, "middle")
+
+    # ---- HC-SR04: 5 V supply, trigger and the divided echo
+    s += wire([(300, 505), (545, 505), (545, 528), (620, 528)], MUTED)
+    s += wire([(300, 440), (520, 440), (520, 550), (620, 550)], MUTED)
+    s += wire([(620, 578), (430, 578), (430, 468), (300, 468)], MUTED)
+    s += resistor(487, 578, "1 kΩ", MUTED)
+    s += junction(430, 578, MUTED)
+    s += wire([(430, 578), (430, RAIL)], MUTED)
+    s += resistor(430, 625, "2 kΩ", MUTED, vertical=True)
+    s += label(404, 630, "5 V → 3.3 V", MUTED, "end")
+
+    # ---- grounds
+    s += wire([(300, 556), (340, 556), (340, RAIL)])
+    s += wire([(880, 300), (COLL, 300), (COLL, RAIL)])
+    s += wire([(880, 448), (COLL, 448)])
+    s += wire([(880, 600), (COLL, 600)])
+    s += wire([(620, 292), (596, 292), (596, RAIL)])
+    s += wire([(950, 165), (COLL, 165), (COLL, 300)])
+    for y in (448, 600):
+        s += junction(COLL, y)
+    s += wire([(120, RAIL), (COLL, RAIL)], INK, 2.4)
+    s += label(128, RAIL + 20, "common ground — ESP32, driver logic, motor supply", MUTED)
+    s += label(588, 332, "CLK → GND (internal 12 MHz oscillator)", MUTED, "end")
+
+    # ---- the one that bites: AS5600 DIR
+    s += wire([(880, 465), (COLL - 18, 465), (COLL - 18, RAIL - 24), (COLL, RAIL - 24)], WARN, 2.0)
+    s += junction(COLL, RAIL - 24, WARN)
+    s += label(922, 402, "DIR needs its own wire to GND.", WARN)
+    s += label(922, 418, "Left floating it picks up the I2C", WARN)
+    s += label(922, 434, "lines and flips polarity between", WARN)
+    s += label(922, 450, "reads — the angle comes back as", WARN)
+    s += label(922, 466, "x and 4096−x alternately.", WARN)
+
+    # ---- power / motor
+    s += wire([(950, 140), (880, 140)], WARN, 2.0)
+    s += wire([(880, 250), (950, 250)], INK, 2.4)
+    s += label(915, 236, "4 wires", MUTED, "middle")
+
+    s.append(txt(24, H - 30, "MS1 and MS2 are left floating: microstepping is selected over UART "
+                 "(mstep_reg_select = 1). AS5600 OUT and GPO unused.", 10.5, MUTED))
+    s.append(txt(24, H - 14, "GPIO16 toggles once per control tick so a logic analyser can read "
+                 "the loop period independently of the firmware's own measurement.", 10.5, MUTED))
     s.append("</svg>")
     return NL.join(s)
 
@@ -313,7 +469,8 @@ def architecture_svg():
 os.makedirs(OUT, exist_ok=True)
 for name, svg in (("linkage.svg", linkage_svg()),
                   ("theta_vs_phi.svg", characteristic_svg()),
-                  ("architecture.svg", architecture_svg())):
+                  ("architecture.svg", architecture_svg()),
+                  ("wiring.svg", wiring_svg())):
     open(os.path.join(OUT, name), "w", encoding="utf-8", newline="\n").write(svg)
     print("yazildi: hardware/drawings/%s (%d bayt)" % (name, len(svg)))
 print("r=%.0f l=%.0f d=%.0f dy=%.0f  theta_max=%.2f  phi_limit=%.1f"

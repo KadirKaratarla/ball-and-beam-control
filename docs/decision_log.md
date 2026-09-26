@@ -438,7 +438,7 @@ döndü ("vuruntu"), ters yönde ilk artışta stall etti. Sargı, yük ve
 StealthChop hipotezleri sırayla incelendi.
 
 **Kök neden:** Mekanizma kurulurken motor kablosu yanlış takılmıştı;
-kullanıcı testler arasında düzeltti. Kanıt: aynı `DIR=0` seviyesi iki
+testler arasında düzeltildi. Kanıt: aynı `DIR=0` seviyesi iki
 testte zıt encoder yönü verdi. Yüksüz test (biyel ayrı) düzeltilmiş
 kablolamayla **bir komut turu = bir ölçülen tur** (+4116/−4096 sayım,
 12.44 µadım/sayım, `ola/olb=0`, `CS=20`) gösterdi; yük altında ince tarama
@@ -470,8 +470,8 @@ yeterli.
 yön başına 1600 nokta. Komut konumu mikroadım sayısından kesin.
 
 **Bulgu:** RAW_ANGLE tur boyunca **−2.8° … +6.0°** sapıyor. Harmonikler:
-1. **3.05°** (mıknatıs eksen kaçıklığı — kullanıcı montajda kaymayı
-teyit etti), 2. **1.83°** (eğiklik), 3. 0.31°, 4. 0.05°. 4 harmonik model
+1. **3.05°** (mıknatıs eksen kaçıklığı — montajdaki kayma gözle de
+teyit edildi), 2. **1.83°** (eğiklik), 3. 0.31°, 4. 0.05°. 4 harmonik model
 artığı 0.043° rms. İleri/geri histerezis **0.17°** (rotor gecikmesi,
 encoder hatası değil). Hata saf konum fonksiyonu, tekrarlanabilir.
 
@@ -600,7 +600,7 @@ canlı okuma yapan araç önce `reset_input_buffer` + 1 s boşaltma yapmalı.
 
 ## Faz 2 kapanış özeti (2026-09-15)
 
-Kullanıcı onayıyla kapandı; `feature/control-core` → `main` (merge), Faz 3
+Kapandı; `feature/control-core` → `main` (merge), Faz 3
 için `feature/pid-core` açıldı.
 
 | Alt faz | Sonuç |
@@ -625,7 +625,7 @@ susturulması, VMAX'ın kapalı çevrim ihtiyacına göre yükseltilmesi.
 **Geometri (referans STL'lerden + ölçü):** krank r = 31 mm (Crank.STL),
 biyel l = 90 mm (Coupler.STL, 605ZZ yuvaları), motor mili 60 / mafsal
 150 mm yükseklik → biyel dikeyken beam yatay; **d = 477 mm** (mafsal pimi
-↔ biyel pimi, kullanıcı ölçtü); krank 9'da pim mafsal kulesinden uzağa.
+↔ biyel pimi, düzenekte ölçüldü); krank 9'da pim mafsal kulesinden uzağa.
 `linkage.c`: tam kinematik (φ→θ Newton, θ→φ daire kesişimi).
 
 **Bulgu — eğri asimetrik ve tepe noktalı:** biyel kısa olduğu için pimin
@@ -683,7 +683,7 @@ top hedefte, 1 cm sabit hata (Ki = 0) → Ki 0.15. Motor/sürücü sıcak
   12 000 µadım/s ve 430 000 µadım/s² ile "fırlatıyordu". `stepper_track`'e
   doğrusal bölge (`v = min(vmax, √(2ae), 40·e)`) → küçük düzeltmeler 1–5 rpm
   kayma; büyük hatalarda sqrt/VMAX aynen. Simülasyon: bozucu toparlama
-  1.8 → 3.1 s (yalnızca son 3 mm). Kullanıcı: "bu seviye iyi".
+  1.8 → 3.1 s (yalnızca son 3 mm); tezgâhta bu seviye yeterli bulundu.
 - Krank hız/ivme sınırını düşürmek (430k → 150k) simülasyonda toparlamayı
   belirgin bozdu (5 s) → 43 000 / 430 000 kaldı.
 - Kaydedilen "kendiliğinden" sıçramalar (durgun → 15 cm/s tek karede)
@@ -706,7 +706,7 @@ düşürüyor → link.py kapanıyor (Faz 4.4 yeniden bağlanma).
 
 ## Faz 3 kapanış özeti (2026-09-20)
 
-Kullanıcı onayıyla kapandı; `feature/pid-core` → `main` (`f4698e1`), Faz 4
+Kapandı; `feature/pid-core` → `main` (`f4698e1`), Faz 4
 için `feature/protocol` açıldı.
 
 | Alt faz | Sonuç |
@@ -769,7 +769,7 @@ tutulmalı (mevcut). COM11 RTS darbesi (EN) test için reset aracı.
 
 ## Faz 4 kapanış özeti (2026-09-20)
 
-Kullanıcı onayıyla kapandı; `feature/protocol` → `main`, Faz 5 için
+Kapandı; `feature/protocol` → `main`, Faz 5 için
 `feature/gui` açıldı (gui repo: `main`, `497d44a`).
 
 | Alt faz | Sonuç |
@@ -789,7 +789,7 @@ durgunda IHOLD.
 
 ## Faz 5 kapanış özeti (2026-09-22)
 
-Kullanıcı onayıyla kapandı; firmware `feature/gui` → `main` (`b2bfdb3`),
+Kapandı; firmware `feature/gui` → `main` (`b2bfdb3`),
 Faz 6 için `feature/autotune` açıldı. GUI repo: `main` (`618daad`).
 
 | Alt faz | Sonuç |
@@ -805,7 +805,7 @@ Faz 6 için `feature/autotune` açıldı. GUI repo: `main` (`618daad`).
 Ek: cihaz yokluğu yönetimi — ESP ve kamera için ayrı şerit, kamera yoksa
 süreç ölmüyor (link canlı, 3 s'de bir ve "Yeniden tara" ile deniyor);
 açılışta kayıtlı kalibrasyon varsa "eski ayarla devam / yeni kalibrasyon"
-sorusu (K-016'nın kullanıcı onaylı gevşetilmesi).
+sorusu (K-016'nın bilerek gevşetilmesi).
 
 **Bulunan firmware hataları:** (1) `MODE RUN` STOP/FAULT'tan yeniden
 devreye almıyordu; (2) yeniden devreye girişte darbe sayacı eski
@@ -816,7 +816,7 @@ geçişler doğrulandı.
 ---
 
 ## K-027 — Tesis ölçüldü; otomatik ayar reddedildi, elle bulunan kazançlar doğrulandı
-**Tarih:** 2026-09-23 · **Faz:** 6 · **Durum:** Karar verildi (kullanıcı: "auto tune'u devre dışı bırakalım")
+**Tarih:** 2026-09-23 · **Faz:** 6 · **Durum:** Karar verildi — otomatik ayar devre dışı
 
 **Yeni firmware yeteneği (kalıcı):** `THETA` komutu + `MODE_OPENLOOP`
 durumu — beam açısı PID yerine doğrudan PC'den. ±2° sınırlı, **500 ms
@@ -867,7 +867,7 @@ kördü); `MODE_OPENLOOP` protokol doğrulamasından geçmiyordu.
 ## K-028 — Son PID kazançları: aşımın kaynağı sönüm, çözüm Kd 0.34 → 0.50
 **Tarih:** 2026-09-24 · **Faz:** 6 · **Durum:** Uygulandı (firmware varsayılanı)
 
-**Şikâyet:** "sistem hedefi geçiyor, sonradan oturuyor."
+**Belirti:** Sistem hedefi geçiyor, salınarak sonradan oturuyor.
 
 **Ölçüm:** `gain_sweep.py` ile aday kazanç setleri tezgâhta ±5 cm adımlarla
 dört bağımsız taramada puanlandı; ardından `ab_test.py` ile eski/yeni set
@@ -903,8 +903,8 @@ Merkezden uzaklaşan adımlar bu yüzden dar bir banda hiç oturmuyor.
   sürünerek geçmeye yarıyor, büyütmek ölçülebilir bir şey kazandırmıyor.
 * Kd 0,50'nin ötesi motor vızıltısını ve mekanik gürültüyü artırıyor.
 * Adım aşımını tamamen sıfırlayacak yol **hedef rampası** (iç setpoint'i
-  ~4 cm/s ile süzmek) veya β ağırlıklı setpoint; kullanıcı gerek olmadığını
-  söyledi (2026-09-26), eklenmedi.
+  ~4 cm/s ile süzmek) veya β ağırlıklı setpoint; mevcut başarım yeterli
+  görüldüğü için (2026-09-26) eklenmedi.
 
 **Ölçüm tuzağı (tekrar edilecekse):** oturma bandı 0,3 cm alınırsa adımların
 yarısı "oturmadı" sayılır ve ortalamalar `nan` ile bozulur. Tesisin kendi

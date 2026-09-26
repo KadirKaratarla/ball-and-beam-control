@@ -42,6 +42,10 @@ TMC2208 tarafı: `CLK` → GND (dahili 12 MHz osilatör), `VIO` → 3V3,
 `MS1`/`MS2` boşta (mikro adım UART'tan seçiliyor), `VM` → 12 V, sargılar
 `M1A/M1B` ve `M2A/M2B`. AS5600'ün `OUT` ve `GPO` pinleri boşta.
 
+![Bağlantı şeması](drawings/wiring.svg)
+
+Şema `tools/make_drawings.py` ile üretiliyor.
+
 ### Kablolamada dikkat edilecekler
 
 1. **Ortak GND:** ESP32, sürücü lojiği, sürücü motor katı ve 12 V güç

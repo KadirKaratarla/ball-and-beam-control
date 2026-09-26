@@ -80,6 +80,10 @@ donanım geri geldiğinde kendi kendine toparlanıyor.
 | TMC2208 (soğutuculu) | PS3 Eye kamera |
 | ![Sürücü](assets/images/tmc2208.jpg) | ![Kamera](assets/images/camera_mount.jpg) |
 
+Bağlantılar:
+
+![Bağlantı şeması](hardware/drawings/wiring.svg)
+
 Parça listesi, **doğrulanmış pin haritası**, kablolamadaki tuzaklar (AS5600'ün DIR
 pini mutlaka GND'ye, TMC UART TX'ine 1 kΩ, ortak toprak…), bağlama ölçüleri ve
 kamera sürücüsünün kurulumu: **[hardware/README.md](hardware/README.md)**
