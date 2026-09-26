@@ -33,7 +33,7 @@ RIG_CRANK = "krankın yandan videosu.mp4"
 SPLIT_RIG = "onuncu adım için çekilen fiziksel hareket videosu.mp4"
 SPLIT_GUI = "onuncu adım için ekran görüntüsü.mp4"
 SPLIT_OFFSET = 5.19
-SPLIT = dict(t0=15.5, t1=27.5, fps=6, width=1000, colors=72,
+SPLIT = dict(t0=15.5, t1=27.5, fps=8, width=1400, colors=256,
              rig_crop=(0, 120, 848, 400), gui_crop=(690, 88, 1906, 385))
 
 
@@ -46,19 +46,20 @@ STRIP = (0, 28, 1906, 440)
 PANEL = (0, 28, 1320, 650)
 
 # name -> (source video, start s, end s, output fps, output width, crop, colors)
-# Ekran kayitlari duz renkli ve durgun, telefon videolari her pikselde
-# oynuyor; onlar daha dar, daha dusuk kare hizli ve daha az renkli olmali.
+# Pencereler uclarindaki olu zaman kirpilarak secildi (topun izi
+# takip edilip hareketin baslangic/bitisi bulundu), boylece ayni dosya
+# boyutu daha yuksek cozunurluge harcanabiliyor.
 CLIPS = {
-    "setpoint_steps":  (GUI_CAP, 103.0, 114.0, 9, 860, STRIP, 96),
-    "camera_tracking": (GUI_CAP, 26.0, 35.0, 9, 860, STRIP, 96),
-    "esp_recovery":    (GUI_CAP, 78.5, 88.0, 7, 1000, PANEL, 96),
-    "camera_recovery": (GUI_CAP, 93.5, 103.0, 7, 1000, PANEL, 96),
+    "setpoint_steps":  (GUI_CAP, 103.0, 114.0, 10, 1200, STRIP, 256),
+    "camera_tracking": (GUI_CAP, 26.0, 35.0, 10, 1200, STRIP, 256),
+    "esp_recovery":    (GUI_CAP, 78.5, 88.0, 8, 1320, PANEL, 256),
+    "camera_recovery": (GUI_CAP, 93.5, 103.0, 8, 1320, PANEL, 256),
 
     # Duzenegin kendisi (telefon, 848x478).
-    "rig_disturbance": (RIG_DISTURB, 0.6, 10.6, 8, 480, None, 64),
-    "rig_setpoint":    (RIG_SETPOINT, 0.3, 10.3, 8, 480, None, 64),
-    "rig_linkage":     (RIG_LINKAGE, 0.3, 9.0, 8, 480, None, 64),
-    "rig_crank":       (RIG_CRANK, 0.1, 4.3, 8, 480, None, 64),
+    "rig_disturbance": (RIG_DISTURB, 1.0, 11.3, 10, 720, None, 256),
+    "rig_setpoint":    (RIG_SETPOINT, 1.0, 9.0, 10, 720, None, 256),
+    "rig_linkage":     (RIG_LINKAGE, 0.8, 8.2, 10, 720, None, 256),
+    "rig_crank":       (RIG_CRANK, 0.8, 4.35, 10, 720, None, 256),
 }
 
 # name -> (source video, timestamp s, width, crop)
@@ -116,6 +117,19 @@ def frames(path, t0, t1, out_fps, width, crop=None):
     return out
 
 
+def shared_palette(ims, colors):
+    """One palette for the whole clip -- a shared palette keeps the colours
+    from flickering frame to frame and compresses far better than per-frame
+    ones. It is built from eight frames spread across the clip, not just the
+    middle one, so a colour that only shows up late still gets a slot."""
+    picks = [ims[i * (len(ims) - 1) // 7] for i in range(8)] if len(ims) > 8 else ims
+    w, h = picks[0].size
+    strip = Image.new("RGB", (w, h * len(picks)))
+    for i, im in enumerate(picks):
+        strip.paste(im, (0, i * h))
+    return strip.quantize(colors=colors, method=Image.MEDIANCUT)
+
+
 def write_gif(name, spec):
     src, t0, t1, fps, width, crop, colors = spec
     path = os.path.join(VIDEO, src)
@@ -126,9 +140,7 @@ def write_gif(name, spec):
     if not ims:
         print("  atlandi (kare yok): %s" % name)
         return
-    # One palette for the whole clip: the UI barely changes between frames,
-    # so a shared palette both looks steadier and compresses much better.
-    base = ims[len(ims) // 2].quantize(colors=colors, method=Image.MEDIANCUT)
+    base = shared_palette(ims, colors)
     # No dithering: on a flat dark UI it sprays per-pixel noise that changes
     # every frame, which both looks worse and triples the file size.
     ims = [im.quantize(palette=base, dither=Image.NONE) for im in ims]
@@ -205,7 +217,7 @@ def write_split():
         d.text((8, 6), "duzenek", fill="#8b949e")
         d.text((half + 8, 6), "arayuz -- top konumu", fill="#8b949e")
         ims.append(canvas)
-    base = ims[len(ims) // 2].quantize(colors=SPLIT["colors"], method=Image.MEDIANCUT)
+    base = shared_palette(ims, SPLIT["colors"])
     ims = [im.quantize(palette=base, dither=Image.NONE) for im in ims]
     out = os.path.join(GIF, "split_screen.gif")
     ims[0].save(out, save_all=True, append_images=ims[1:], loop=0,
