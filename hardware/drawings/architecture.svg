@@ -1,0 +1,55 @@
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 940 496' width='940' height='496' role='img'>
+<title>Sinyal akisi</title>
+<rect x='0' y='0' width='940' height='496' rx='8' fill='#ffffff' stroke='#d0d7de'/>
+<text x='24.0' y='32.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='15' fill='#1f2328' text-anchor='start' font-weight='600'>Sinyal akışı</text>
+<text x='24.0' y='52.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#6e7781' text-anchor='start' font-weight='400'>Konum PC'de görüntüden çıkıyor, denetim ESP32-S3'te 250 Hz'de koşuyor.</text>
+<defs><marker id='ar' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto'><path d='M0,1 L9,5 L0,9' fill='#0969da'/></marker></defs>
+<rect x='24.0' y='92.0' width='196.0' height='92.0' rx='7' fill='#f6f8fa' stroke='#1f2328' stroke-width='1.6'/>
+<text x='36.0' y='114.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#1f2328' text-anchor='start' font-weight='600'>PS3 Eye kamera</text>
+<text x='36.0' y='133.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>320x240 @ 100 fps</text>
+<text x='36.0' y='148.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>libusbK + pseyepy</text>
+<text x='36.0' y='163.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>pozlama/kazanç sabit</text>
+<rect x='24.0' y='232.0' width='196.0' height='118.0' rx='7' fill='#f6f8fa' stroke='#1f2328' stroke-width='1.6'/>
+<text x='36.0' y='254.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#1f2328' text-anchor='start' font-weight='600'>PC — Python</text>
+<text x='36.0' y='273.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>tracker.py: HSV eşiği,</text>
+<text x='36.0' y='288.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>ışın üzerine izdüşüm</text>
+<text x='36.0' y='303.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>ui_main.py: PySide6 arayüz</text>
+<text x='36.0' y='318.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>kamera ve link ayrı süreçte</text>
+<rect x='372.0' y='232.0' width='210.0' height='118.0' rx='7' fill='#ddf4ff' stroke='#0969da' stroke-width='1.6'/>
+<text x='384.0' y='254.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#0969da' text-anchor='start' font-weight='600'>ESP32-S3</text>
+<text x='384.0' y='273.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>4 ms GPTimer ISR (250 Hz)</text>
+<text x='384.0' y='288.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>pid.c: ölçüm türevli PID</text>
+<text x='384.0' y='303.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>linkage.c: θ → krank açısı</text>
+<text x='384.0' y='318.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>korkuluklar: θ, takip, WDT</text>
+<rect x='716.0' y='92.0' width='200.0' height='92.0' rx='7' fill='#f6f8fa' stroke='#1f2328' stroke-width='1.6'/>
+<text x='728.0' y='114.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#1f2328' text-anchor='start' font-weight='600'>AS5600 encoder</text>
+<text x='728.0' y='133.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>4096 sayım/tur, 400 kHz</text>
+<text x='728.0' y='148.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>LUT düzeltmesi</text>
+<text x='728.0' y='163.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>makullük filtresi</text>
+<rect x='716.0' y='232.0' width='200.0' height='118.0' rx='7' fill='#f6f8fa' stroke='#1f2328' stroke-width='1.6'/>
+<text x='728.0' y='254.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#1f2328' text-anchor='start' font-weight='600'>TMC2208 + NEMA 17</text>
+<text x='728.0' y='273.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>1/256 mikro adım, 0,61 A</text>
+<text x='728.0' y='288.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>LEDC darbe + PCNT sayım</text>
+<text x='728.0' y='303.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>krank r=31 → biyel l=90</text>
+<text x='728.0' y='318.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>→ beam θ = ±3,13°</text>
+<rect x='372.0' y='392.0' width='210.0' height='56.0' rx='7' fill='#fff1e5' stroke='#bc4c00' stroke-width='1.6'/>
+<text x='384.0' y='414.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#bc4c00' text-anchor='start' font-weight='600'>top — 45 cm ray</text>
+<text x='384.0' y='433.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>kapalı çevrim buradan kapanıyor</text>
+<line x1='122.0' y1='184.0' x2='122.0' y2='232.0' stroke='#6e7781' stroke-width='1.8' marker-end='url(#ar)'/>
+<text x='122.0' y='201.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='middle' font-weight='600'>kare</text>
+<line x1='220.0' y1='268.0' x2='372.0' y2='268.0' stroke='#0969da' stroke-width='1.8' marker-end='url(#ar)'/>
+<text x='296.0' y='261.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#0969da' text-anchor='middle' font-weight='600'>USB ikili çerçeve</text>
+<line x1='372.0' y1='314.0' x2='220.0' y2='314.0' stroke='#0969da' stroke-width='1.8' marker-end='url(#ar)'/>
+<text x='296.0' y='329.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#0969da' text-anchor='middle' font-weight='600'>TELEM 125 Hz</text>
+<line x1='582.0' y1='268.0' x2='716.0' y2='268.0' stroke='#0969da' stroke-width='1.8' marker-end='url(#ar)'/>
+<text x='649.0' y='261.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#0969da' text-anchor='middle' font-weight='600'>adım / yön</text>
+<line x1='816.0' y1='232.0' x2='816.0' y2='184.0' stroke='#6e7781' stroke-width='1.8' marker-end='url(#ar)'/>
+<text x='816.0' y='201.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='middle' font-weight='600'>açı</text>
+<line x1='716.0' y1='152.0' x2='582.0' y2='240.0' stroke='#6e7781' stroke-width='1.8' marker-end='url(#ar)'/>
+<text x='649.0' y='189.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='middle' font-weight='600'>krank φ</text>
+<line x1='716.0' y1='330.0' x2='582.0' y2='410.0' stroke='#bc4c00' stroke-width='1.8' marker-end='url(#ar)'/>
+<text x='649.0' y='385.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#bc4c00' text-anchor='middle' font-weight='600'>beam açısı</text>
+<line x1='372.0' y1='420.0' x2='122.0' y2='350.0' stroke='#bc4c00' stroke-width='1.8' marker-end='url(#ar)'/>
+<text x='247.0' y='400.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#bc4c00' text-anchor='middle' font-weight='600'>topun görüntüsü</text>
+<text x='24.0' y='476.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>POS 100 Hz (PC→ESP) · TELEM 125 Hz + HEALTH 1 Hz (ESP→PC) · AA 55 | tip | uzunluk | yük ≤64 | crc8</text>
+</svg>

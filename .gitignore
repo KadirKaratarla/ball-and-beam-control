@@ -1,0 +1,36 @@
+# --- build / tooling ---
+.venv/
+__pycache__/
+*.pyc
+.pio/
+CMakeFiles/
+CMakeCache.txt
+sdkconfig.esp32-s3-devkitc-1
+sdkconfig.tests
+.vscode/
+
+# --- runtime output ---
+logs/
+*.csv.bak
+
+# --- media ---
+# Ham kayitlar depoya girmez (GitHub dosya basina 100 MB siniri, klon boyutu).
+# README'ye giren PNG/GIF'ler tools/make_media.py ile bunlardan uretilir.
+assets/video/*
+!assets/video/.gitkeep
+
+# --- ucuncu taraf 3D modeller ---
+# Kaynak deponun lisansi yok; yeniden dagitma hakkimiz yok.
+# Bkz. hardware/3d/ATTRIBUTION.md
+hardware/3d/*
+!hardware/3d/ATTRIBUTION.md
+
+# --- misc ---
+tools/zadig-2.9.exe
+
+# Ham fotograflar (islenmisleri assets/images/ altinda)
+assets/photos/*
+!assets/photos/.gitkeep
+
+# Alt depolarin eski .git klasorleri (yedek, kok depoya girmez)
+.git.bak/
