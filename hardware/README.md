@@ -124,6 +124,6 @@ kazanç register'larına erişemiyor ve 1 saniyelik takılmalar yapıyor
 
 ## 3D parçalar
 
-`hardware/3d/` altındaki STL'ler ve SolidWorks kaynak arşivi **bu projeye
-ait değil**; IVProjects'in açık deposundan alındı. Kullanım koşulları için
-`hardware/3d/ATTRIBUTION.md` dosyasını oku.
+Mekanik parçalar hazır bir açık projeden basıldı; modeller bu depoda değil,
+kaynağından indiriliyor. Hangi parçaların gerektiği, kaynak bağlantısı ve
+yazılımın beklediği ölçüler: [`hardware/3d/`](3d/)

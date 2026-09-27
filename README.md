@@ -227,11 +227,11 @@ kararın tarihi, gerekçesi, ölçümü ve reddedilen alternatifleri yazılı. �
 
 Kod, belgeler ve çizimler [MIT](LICENSE).
 
-`hardware/3d/` altındaki basılı parçaların modelleri **bu projeye ait değil**;
-[IVProjects/Engineering_Projects](https://github.com/IVProjects/Engineering_Projects/tree/main/ProjectFiles/Ball%20and%20Beam%20Control%20System)
-deposundan alındı. O deponun lisansı belirtilmediği için modeller burada yeniden
-dağıtılmıyor; koşullar [hardware/3d/ATTRIBUTION.md](hardware/3d/ATTRIBUTION.md)
-dosyasında.
+Basılı parçaların modelleri bu projeye ait değil ve burada yeniden
+yayımlanmıyor — kaynağından indirilebilir:
+[IVProjects/Engineering_Projects](https://github.com/IVProjects/Engineering_Projects/tree/main/ProjectFiles/Ball%20and%20Beam%20Control%20System).
+Hangi parçaların gerektiği ve yazılımın beklediği ölçüler
+[hardware/3d/](hardware/3d/) içinde.
 
 ---
 

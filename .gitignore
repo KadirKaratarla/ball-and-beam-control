@@ -20,10 +20,10 @@ assets/video/*
 !assets/video/.gitkeep
 
 # --- ucuncu taraf 3D modeller ---
-# Kaynak deponun lisansi yok; yeniden dagitma hakkimiz yok.
-# Bkz. hardware/3d/ATTRIBUTION.md
+# Modeller kaynagindan indiriliyor, burada yeniden yayimlanmiyor.
+# Bkz. hardware/3d/README.md
 hardware/3d/*
-!hardware/3d/ATTRIBUTION.md
+!hardware/3d/README.md
 
 # --- misc ---
 tools/zadig-2.9.exe
