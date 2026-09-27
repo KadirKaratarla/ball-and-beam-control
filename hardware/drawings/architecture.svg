@@ -36,20 +36,20 @@
 <text x='384.0' y='414.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#bc4c00' text-anchor='start' font-weight='600'>ball — 45 cm rail</text>
 <text x='384.0' y='433.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>the loop closes here</text>
 <line x1='122.0' y1='184.0' x2='122.0' y2='232.0' stroke='#6e7781' stroke-width='1.8' marker-end='url(#ar)'/>
-<text x='122.0' y='201.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='middle' font-weight='600'>frames</text>
+<text x='132.0' y='212.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='600'>frames</text>
 <line x1='220.0' y1='268.0' x2='372.0' y2='268.0' stroke='#0969da' stroke-width='1.8' marker-end='url(#ar)'/>
-<text x='296.0' y='261.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#0969da' text-anchor='middle' font-weight='600'>USB binary frames</text>
+<text x='296.0' y='259.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#0969da' text-anchor='middle' font-weight='600'>USB binary frames</text>
 <line x1='372.0' y1='314.0' x2='220.0' y2='314.0' stroke='#0969da' stroke-width='1.8' marker-end='url(#ar)'/>
-<text x='296.0' y='329.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#0969da' text-anchor='middle' font-weight='600'>TELEM 125 Hz</text>
+<text x='296.0' y='331.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#0969da' text-anchor='middle' font-weight='600'>TELEM 125 Hz</text>
 <line x1='582.0' y1='268.0' x2='716.0' y2='268.0' stroke='#0969da' stroke-width='1.8' marker-end='url(#ar)'/>
-<text x='649.0' y='261.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#0969da' text-anchor='middle' font-weight='600'>step / dir</text>
+<text x='649.0' y='259.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#0969da' text-anchor='middle' font-weight='600'>step / dir</text>
 <line x1='816.0' y1='232.0' x2='816.0' y2='184.0' stroke='#6e7781' stroke-width='1.8' marker-end='url(#ar)'/>
-<text x='816.0' y='201.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='middle' font-weight='600'>shaft angle</text>
+<text x='806.0' y='212.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='end' font-weight='600'>shaft angle</text>
 <line x1='716.0' y1='152.0' x2='582.0' y2='240.0' stroke='#6e7781' stroke-width='1.8' marker-end='url(#ar)'/>
-<text x='649.0' y='189.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='middle' font-weight='600'>crank φ</text>
+<text x='649.0' y='174.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='middle' font-weight='600'>crank φ</text>
 <line x1='716.0' y1='330.0' x2='582.0' y2='410.0' stroke='#bc4c00' stroke-width='1.8' marker-end='url(#ar)'/>
-<text x='649.0' y='385.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#bc4c00' text-anchor='middle' font-weight='600'>beam angle</text>
+<text x='649.0' y='403.9' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#bc4c00' text-anchor='middle' font-weight='600'>beam angle</text>
 <line x1='372.0' y1='420.0' x2='122.0' y2='350.0' stroke='#bc4c00' stroke-width='1.8' marker-end='url(#ar)'/>
-<text x='247.0' y='400.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#bc4c00' text-anchor='middle' font-weight='600'>ball in view</text>
+<text x='247.0' y='411.5' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#bc4c00' text-anchor='middle' font-weight='600'>ball in view</text>
 <text x='24.0' y='476.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>POS 100 Hz (PC→ESP) · TELEM 125 Hz + HEALTH 1 Hz (ESP→PC) · frame: AA 55 | type | len | payload ≤64 B | crc8</text>
 </svg>

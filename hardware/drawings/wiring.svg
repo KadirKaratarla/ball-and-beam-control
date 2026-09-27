@@ -1,108 +1,106 @@
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1140 750' width='1140' height='750' role='img'>
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1180 840' width='1180' height='840' role='img'>
 <title>Wiring</title>
-<rect x='0' y='0' width='1140' height='750' rx='8' fill='#ffffff' stroke='#d0d7de'/>
+<rect x='0' y='0' width='1180' height='840' rx='8' fill='#ffffff' stroke='#d0d7de'/>
 <text x='24.0' y='32.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='15' fill='#1f2328' text-anchor='start' font-weight='600'>Wiring</text>
-<text x='24.0' y='52.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#6e7781' text-anchor='start' font-weight='400'>Verified against the running rig. Pin numbers are the single source of truth in firmware/src/board_pins.h.</text>
-<rect x='60.0' y='100.0' width='240.0' height='480.0' rx='7' fill='#f6f8fa' stroke='#1f2328' stroke-width='1.6'/>
-<text x='74.0' y='124.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#1f2328' text-anchor='start' font-weight='600'>ESP32-S3 DevKitC-1</text>
-<text x='74.0' y='140.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>N8 · USB-Serial-JTAG + CH343</text>
-<rect x='620.0' y='110.0' width='260.0' height='210.0' rx='7' fill='#f6f8fa' stroke='#1f2328' stroke-width='1.6'/>
-<text x='634.0' y='134.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#1f2328' text-anchor='start' font-weight='600'>TMC2208</text>
-<text x='634.0' y='150.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>UART mode · 1/256 · IRUN 10 (0.61 A rms)</text>
-<rect x='620.0' y='345.0' width='260.0' height='135.0' rx='7' fill='#f6f8fa' stroke='#1f2328' stroke-width='1.6'/>
-<text x='634.0' y='369.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#1f2328' text-anchor='start' font-weight='600'>AS5600</text>
-<text x='634.0' y='385.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>I2C 400 kHz · 4096 counts/rev</text>
-<rect x='620.0' y='505.0' width='260.0' height='115.0' rx='7' fill='#f6f8fa' stroke='#1f2328' stroke-width='1.6'/>
-<text x='634.0' y='529.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#1f2328' text-anchor='start' font-weight='600'>HC-SR04</text>
-<text x='634.0' y='545.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>backup sensor, not used</text>
-<rect x='950.0' y='110.0' width='160.0' height='70.0' rx='7' fill='#f6f8fa' stroke='#1f2328' stroke-width='1.6'/>
-<text x='964.0' y='134.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#1f2328' text-anchor='start' font-weight='600'>12 V supply</text>
-<text x='964.0' y='150.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>motor rail</text>
-<rect x='950.0' y='210.0' width='160.0' height='90.0' rx='7' fill='#f6f8fa' stroke='#1f2328' stroke-width='1.6'/>
-<text x='964.0' y='234.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#1f2328' text-anchor='start' font-weight='600'>NEMA 17</text>
-<text x='964.0' y='250.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>200 steps/rev</text>
-<text x='290.0' y='149.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>3V3</text>
-<text x='290.0' y='189.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GPIO4  STEP</text>
-<text x='290.0' y='214.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GPIO5  DIR</text>
-<text x='290.0' y='239.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GPIO15  EN</text>
-<text x='290.0' y='269.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GPIO6  UART TX</text>
-<text x='290.0' y='294.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GPIO7  UART RX</text>
-<text x='290.0' y='354.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GPIO8  SDA</text>
-<text x='290.0' y='379.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GPIO9  SCL</text>
-<text x='290.0' y='444.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GPIO10  TRIG</text>
-<text x='290.0' y='472.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GPIO11  ECHO</text>
-<text x='290.0' y='509.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>5V  (USB)</text>
-<text x='290.0' y='534.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GPIO16  loop probe</text>
-<text x='290.0' y='560.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GND</text>
-<text x='630.0' y='169.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>VIO 3V3</text>
-<text x='630.0' y='194.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>STEP</text>
-<text x='630.0' y='216.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>DIR</text>
-<text x='630.0' y='238.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>EN</text>
-<text x='630.0' y='269.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>PDN_UART</text>
-<text x='630.0' y='296.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>CLK</text>
-<text x='870.0' y='144.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>VM +12 V</text>
-<text x='870.0' y='254.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>M1A M1B M2A M2B</text>
-<text x='870.0' y='304.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GND</text>
-<text x='630.0' y='379.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>VCC 3V3</text>
-<text x='630.0' y='404.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>SDA</text>
-<text x='630.0' y='426.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>SCL</text>
-<text x='870.0' y='452.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GND</text>
-<text x='870.0' y='469.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#bc4c00' text-anchor='end' font-weight='400'>DIR</text>
-<text x='630.0' y='532.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>VCC 5V</text>
-<text x='630.0' y='554.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>TRIG</text>
-<text x='630.0' y='582.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>ECHO</text>
-<text x='870.0' y='604.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GND</text>
-<text x='960.0' y='144.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>+</text>
-<text x='960.0' y='169.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>−</text>
-<polyline points='300.0,145.0 330.0,145.0 330.0,375.0 620.0,375.0' fill='none' stroke='#1f2328' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
-<polyline points='330.0,165.0 620.0,165.0' fill='none' stroke='#1f2328' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
-<circle cx='330.0' cy='165.0' r='3.4' fill='#1f2328'/>
-<text x='340.0' y='138.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='600'>3V3</text>
-<polyline points='300.0,185.0 362.0,185.0 362.0,190.0 620.0,190.0' fill='none' stroke='#0969da' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
-<polyline points='300.0,210.0 378.0,210.0 378.0,212.0 620.0,212.0' fill='none' stroke='#0969da' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
-<polyline points='300.0,235.0 394.0,235.0 394.0,234.0 620.0,234.0' fill='none' stroke='#0969da' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
-<text x='455.0' y='178.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='middle' font-weight='600'>LEDC square wave, counted back by PCNT</text>
-<text x='455.0' y='252.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='middle' font-weight='600'>LOW = driver enabled</text>
-<polyline points='300.0,265.0 560.0,265.0 620.0,265.0' fill='none' stroke='#bc4c00' stroke-width='1.8' stroke-linejoin='round' stroke-linecap='round'/>
-<rect x='433.0' y='258.0' width='38' height='14' rx='2' fill='#ffffff' stroke='#bc4c00' stroke-width='1.4'/>
-<text x='452.0' y='253.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#bc4c00' text-anchor='middle' font-weight='600'>1 kΩ</text>
-<polyline points='300.0,290.0 560.0,290.0 560.0,265.0' fill='none' stroke='#bc4c00' stroke-width='1.8' stroke-linejoin='round' stroke-linecap='round'/>
-<circle cx='560.0' cy='265.0' r='3.4' fill='#bc4c00'/>
-<text x='452.0' y='312.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#bc4c00' text-anchor='middle' font-weight='600'>single-wire half-duplex: TX through 1 kΩ, RX direct</text>
-<polyline points='300.0,350.0 410.0,350.0 410.0,400.0 620.0,400.0' fill='none' stroke='#0969da' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
-<polyline points='300.0,375.0 426.0,375.0 426.0,422.0 620.0,422.0' fill='none' stroke='#0969da' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
-<text x='470.0' y='452.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='middle' font-weight='600'>10 kΩ pull-ups on the breakout; internal ones off</text>
-<polyline points='300.0,505.0 545.0,505.0 545.0,528.0 620.0,528.0' fill='none' stroke='#6e7781' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
-<polyline points='300.0,440.0 520.0,440.0 520.0,550.0 620.0,550.0' fill='none' stroke='#6e7781' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
-<polyline points='620.0,578.0 430.0,578.0 430.0,468.0 300.0,468.0' fill='none' stroke='#6e7781' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
-<rect x='468.0' y='571.0' width='38' height='14' rx='2' fill='#ffffff' stroke='#6e7781' stroke-width='1.4'/>
-<text x='487.0' y='566.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='middle' font-weight='600'>1 kΩ</text>
-<circle cx='430.0' cy='578.0' r='3.4' fill='#6e7781'/>
-<polyline points='430.0,578.0 430.0,680.0' fill='none' stroke='#6e7781' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
-<rect x='423.0' y='608.0' width='14' height='34' rx='2' fill='#ffffff' stroke='#6e7781' stroke-width='1.4'/>
-<text x='442.0' y='629.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='600'>2 kΩ</text>
-<text x='404.0' y='630.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='end' font-weight='600'>5 V → 3.3 V</text>
-<polyline points='300.0,556.0 340.0,556.0 340.0,680.0' fill='none' stroke='#1f2328' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
-<polyline points='880.0,300.0 905.0,300.0 905.0,680.0' fill='none' stroke='#1f2328' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
-<polyline points='880.0,448.0 905.0,448.0' fill='none' stroke='#1f2328' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
-<polyline points='880.0,600.0 905.0,600.0' fill='none' stroke='#1f2328' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
-<polyline points='620.0,292.0 596.0,292.0 596.0,680.0' fill='none' stroke='#1f2328' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
-<polyline points='950.0,165.0 905.0,165.0 905.0,300.0' fill='none' stroke='#1f2328' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
-<circle cx='905.0' cy='448.0' r='3.4' fill='#1f2328'/>
-<circle cx='905.0' cy='600.0' r='3.4' fill='#1f2328'/>
-<polyline points='120.0,680.0 905.0,680.0' fill='none' stroke='#1f2328' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'/>
-<text x='128.0' y='700.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='600'>common ground — ESP32, driver logic, motor supply</text>
-<text x='588.0' y='332.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='end' font-weight='600'>CLK → GND (internal 12 MHz oscillator)</text>
-<polyline points='880.0,465.0 887.0,465.0 887.0,656.0 905.0,656.0' fill='none' stroke='#bc4c00' stroke-width='2.0' stroke-linejoin='round' stroke-linecap='round'/>
-<circle cx='905.0' cy='656.0' r='3.4' fill='#bc4c00'/>
-<text x='922.0' y='402.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#bc4c00' text-anchor='start' font-weight='600'>DIR needs its own wire to GND.</text>
-<text x='922.0' y='418.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#bc4c00' text-anchor='start' font-weight='600'>Left floating it picks up the I2C</text>
-<text x='922.0' y='434.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#bc4c00' text-anchor='start' font-weight='600'>lines and flips polarity between</text>
-<text x='922.0' y='450.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#bc4c00' text-anchor='start' font-weight='600'>reads — the angle comes back as</text>
-<text x='922.0' y='466.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#bc4c00' text-anchor='start' font-weight='600'>x and 4096−x alternately.</text>
-<polyline points='950.0,140.0 880.0,140.0' fill='none' stroke='#bc4c00' stroke-width='2.0' stroke-linejoin='round' stroke-linecap='round'/>
-<polyline points='880.0,250.0 950.0,250.0' fill='none' stroke='#1f2328' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'/>
-<text x='915.0' y='236.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='middle' font-weight='600'>4 wires</text>
-<text x='24.0' y='720.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>MS1 and MS2 are left floating: microstepping is selected over UART (mstep_reg_select = 1). AS5600 OUT and GPO unused.</text>
-<text x='24.0' y='736.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>GPIO16 toggles once per control tick so a logic analyser can read the loop period independently of the firmware's own measurement.</text>
+<text x='24.0' y='52.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#6e7781' text-anchor='start' font-weight='400'>Verified against the running rig. Pin numbers come from firmware/src/board_pins.h, the same file the firmware builds against.</text>
+<rect x='60.0' y='96.0' width='244.0' height='412.0' rx='7' fill='#f6f8fa' stroke='#1f2328' stroke-width='1.6'/>
+<text x='74.0' y='120.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#1f2328' text-anchor='start' font-weight='600'>ESP32-S3 DevKitC-1</text>
+<text x='74.0' y='137.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>N8 · USB-Serial-JTAG + CH343 bridge</text>
+<text x='292.0' y='152.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>3V3</text>
+<text x='292.0' y='186.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GPIO4  STEP</text>
+<text x='292.0' y='209.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GPIO5  DIR</text>
+<text x='292.0' y='232.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GPIO15  EN</text>
+<text x='292.0' y='266.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GPIO6  UART TX</text>
+<text x='292.0' y='289.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GPIO7  UART RX</text>
+<text x='292.0' y='323.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GPIO8  SDA</text>
+<text x='292.0' y='346.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GPIO9  SCL</text>
+<text x='292.0' y='380.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GPIO10  TRIG</text>
+<text x='292.0' y='403.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GPIO11  ECHO</text>
+<text x='292.0' y='426.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>5V  (USB)</text>
+<text x='292.0' y='460.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GPIO16  loop probe</text>
+<text x='292.0' y='483.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GND</text>
+<rect x='636.0' y='96.0' width='250.0' height='207.0' rx='7' fill='#f6f8fa' stroke='#1f2328' stroke-width='1.6'/>
+<text x='650.0' y='120.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#1f2328' text-anchor='start' font-weight='600'>TMC2208</text>
+<text x='650.0' y='137.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>UART mode · 1/256 · IRUN 10 → 0.61 A rms</text>
+<text x='648.0' y='152.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>VIO 3V3</text>
+<text x='648.0' y='175.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>STEP</text>
+<text x='648.0' y='198.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>DIR</text>
+<text x='648.0' y='221.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>EN</text>
+<text x='648.0' y='255.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>PDN_UART</text>
+<text x='648.0' y='278.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>CLK</text>
+<text x='874.0' y='152.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>VM +12 V</text>
+<text x='874.0' y='186.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>M1A M1B M2A M2B</text>
+<text x='874.0' y='220.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GND</text>
+<rect x='636.0' y='348.0' width='250.0' height='127.0' rx='7' fill='#f6f8fa' stroke='#1f2328' stroke-width='1.6'/>
+<text x='650.0' y='372.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#1f2328' text-anchor='start' font-weight='600'>AS5600</text>
+<text x='650.0' y='389.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>I²C 400 kHz · 4096 counts/rev</text>
+<text x='648.0' y='404.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>VCC 3V3</text>
+<text x='648.0' y='427.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>SDA</text>
+<text x='648.0' y='450.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>SCL</text>
+<text x='874.0' y='404.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GND</text>
+<text x='874.0' y='427.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#bc4c00' text-anchor='end' font-weight='400'>DIR</text>
+<rect x='636.0' y='500.0' width='250.0' height='127.0' rx='7' fill='#f6f8fa' stroke='#1f2328' stroke-width='1.6'/>
+<text x='650.0' y='524.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#1f2328' text-anchor='start' font-weight='600'>HC-SR04</text>
+<text x='650.0' y='541.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>backup sensor, not in use</text>
+<text x='648.0' y='556.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>VCC 5V</text>
+<text x='648.0' y='579.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>TRIG</text>
+<text x='648.0' y='602.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>ECHO</text>
+<text x='874.0' y='556.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='end' font-weight='400'>GND</text>
+<rect x='950.0' y='96.0' width='170.0' height='58.0' rx='7' fill='#f6f8fa' stroke='#1f2328' stroke-width='1.6'/>
+<text x='964.0' y='120.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#1f2328' text-anchor='start' font-weight='600'>NEMA 17</text>
+<text x='964.0' y='137.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>200 steps/rev · 1/256 microstep</text>
+<rect x='950.0' y='180.0' width='170.0' height='104.0' rx='7' fill='#f6f8fa' stroke='#1f2328' stroke-width='1.6'/>
+<text x='964.0' y='204.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#1f2328' text-anchor='start' font-weight='600'>12 V supply</text>
+<text x='964.0' y='221.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>motor rail only</text>
+<text x='962.0' y='236.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>+</text>
+<text x='962.0' y='259.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#1f2328' text-anchor='start' font-weight='400'>−</text>
+<polyline points='304.0,148.0 332.0,148.0 332.0,400.0 636.0,400.0' fill='none' stroke='#1f2328' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
+<polyline points='332.0,148.0 636.0,148.0' fill='none' stroke='#1f2328' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
+<circle cx='332.0' cy='148.0' r='3.4' fill='#1f2328'/>
+<polyline points='304.0,182.0 358.0,182.0 358.0,171.0 636.0,171.0' fill='none' stroke='#0969da' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
+<polyline points='304.0,205.0 374.0,205.0 374.0,194.0 636.0,194.0' fill='none' stroke='#0969da' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
+<polyline points='304.0,228.0 390.0,228.0 390.0,217.0 636.0,217.0' fill='none' stroke='#0969da' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
+<polyline points='304.0,262.0 574.0,262.0 574.0,251.0 636.0,251.0' fill='none' stroke='#bc4c00' stroke-width='1.8' stroke-linejoin='round' stroke-linecap='round'/>
+<rect x='442.0' y='255.5' width='36' height='13' rx='2' fill='#ffffff' stroke='#bc4c00' stroke-width='1.4'/>
+<text x='460.0' y='251.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#bc4c00' text-anchor='middle' font-weight='600'>1 kΩ</text>
+<polyline points='304.0,285.0 574.0,285.0 574.0,251.0' fill='none' stroke='#bc4c00' stroke-width='1.8' stroke-linejoin='round' stroke-linecap='round'/>
+<circle cx='574.0' cy='251.0' r='3.4' fill='#bc4c00'/>
+<text x='562.0' y='237.5' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#bc4c00' text-anchor='middle' font-weight='600'>single-wire half-duplex</text>
+<polyline points='304.0,319.0 408.0,319.0 408.0,423.0 636.0,423.0' fill='none' stroke='#0969da' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
+<polyline points='304.0,342.0 424.0,342.0 424.0,446.0 636.0,446.0' fill='none' stroke='#0969da' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
+<polyline points='304.0,422.0 556.0,422.0 556.0,552.0 636.0,552.0' fill='none' stroke='#6e7781' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
+<polyline points='304.0,376.0 528.0,376.0 528.0,575.0 636.0,575.0' fill='none' stroke='#6e7781' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
+<polyline points='636.0,598.0 440.0,598.0 440.0,399.0 304.0,399.0' fill='none' stroke='#6e7781' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
+<rect x='482.0' y='591.5' width='36' height='13' rx='2' fill='#ffffff' stroke='#6e7781' stroke-width='1.4'/>
+<text x='500.0' y='618.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='middle' font-weight='600'>1 kΩ</text>
+<circle cx='440.0' cy='598.0' r='3.4' fill='#6e7781'/>
+<polyline points='440.0,598.0 440.0,636.0' fill='none' stroke='#6e7781' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
+<rect x='433.0' y='601.0' width='14' height='32' rx='2' fill='#ffffff' stroke='#6e7781' stroke-width='1.4'/>
+<text x='453.0' y='621.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='600'>2 kΩ</text>
+<text x='426.0' y='621.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='end' font-weight='600'>5 V → 3.3 V</text>
+<polyline points='304.0,479.0 350.0,479.0 350.0,636.0' fill='none' stroke='#1f2328' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
+<polyline points='886.0,216.0 916.0,216.0 916.0,636.0' fill='none' stroke='#1f2328' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
+<polyline points='886.0,400.0 916.0,400.0' fill='none' stroke='#1f2328' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
+<circle cx='916.0' cy='400.0' r='3.4' fill='#1f2328'/>
+<polyline points='886.0,552.0 916.0,552.0' fill='none' stroke='#1f2328' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
+<circle cx='916.0' cy='552.0' r='3.4' fill='#1f2328'/>
+<polyline points='950.0,255.0 916.0,255.0 916.0,216.0' fill='none' stroke='#1f2328' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
+<polyline points='636.0,274.0 610.0,274.0 610.0,636.0' fill='none' stroke='#1f2328' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/>
+<circle cx='610.0' cy='636.0' r='3.4' fill='#1f2328'/>
+<polyline points='120.0,636.0 916.0,636.0' fill='none' stroke='#1f2328' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'/>
+<text x='124.0' y='656.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='600'>common ground</text>
+<polyline points='886.0,423.0 896.0,423.0 896.0,610.0 916.0,610.0' fill='none' stroke='#bc4c00' stroke-width='2.0' stroke-linejoin='round' stroke-linecap='round'/>
+<circle cx='916.0' cy='610.0' r='3.4' fill='#bc4c00'/>
+<text x='932.0' y='447.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#bc4c00' text-anchor='start' font-weight='600'>DIR gets its own wire</text>
+<text x='932.0' y='462.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#bc4c00' text-anchor='start' font-weight='600'>to ground — see note 2</text>
+<polyline points='950.0,232.0 906.0,232.0 906.0,148.0 886.0,148.0' fill='none' stroke='#bc4c00' stroke-width='2.0' stroke-linejoin='round' stroke-linecap='round'/>
+<polyline points='886.0,182.0 932.0,182.0 932.0,125.0 950.0,125.0' fill='none' stroke='#1f2328' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'/>
+<rect x='40' y='670' width='1100' height='152' rx='7' fill='#f6f8fa' stroke='#d0d7de' stroke-width='1.2'/>
+<text x='58.0' y='694.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='12' fill='#1f2328' text-anchor='start' font-weight='600'>Notes</text>
+<text x='58.0' y='716.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>1.  PDN_UART is a single-wire half-duplex pin. TX reaches it through 1 kΩ, RX connects straight to the same node; without the resistor the ESP32 drives over the driver's reply and every read-back returns 0xFF.</text>
+<text x='58.0' y='732.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>2.  AS5600 DIR must be tied to ground with its own wire. Left floating it picks up the I²C lines and flips polarity between reads, reporting the same angle alternately as x and 4096 − x.</text>
+<text x='58.0' y='748.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>3.  HC-SR04 drives ECHO at 5 V, so it reaches GPIO11 through a 1 kΩ / 2 kΩ divider. The sensor is wired but unused: the ball's position comes from the camera.</text>
+<text x='58.0' y='764.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>4.  MS1 and MS2 float — the microstep setting arrives over UART (mstep_reg_select = 1). CLK to ground selects the driver's internal 12 MHz oscillator. EN is active low. AS5600 OUT and GPO stay unconnected.</text>
+<text x='58.0' y='780.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>5.  The AS5600 breakout carries its own 10 kΩ pull-ups, so the ESP32's internal ones are disabled. Bus runs at 400 kHz.</text>
+<text x='58.0' y='796.0' font-family='Segoe UI, Helvetica, Arial, sans-serif' font-size='10' fill='#6e7781' text-anchor='start' font-weight='400'>6.  GPIO16 toggles once per control tick so a logic analyser can read the loop period independently of the firmware's own measurement.</text>
 </svg>

@@ -159,7 +159,8 @@ def linkage_svg():
 
     # dimension r
     s.append(line(cx0, cy0 + 14, cx, cy + 14, MUTED, 1.1))
-    s.append(txt((cx0 + cx) / 2, cy0 + 30, "r = %.0f mm" % R, 11, WARN, "middle", "600"))
+    tower_mid = (P(-24, 0)[0] + P(24, 0)[0]) / 2
+    s.append(txt(tower_mid, cy0 + 40, "r = %.0f mm" % R, 11, WARN, "middle", "600"))
     # dimension l (rod)
     s.append(txt((cx + bpx) / 2 + 12, (cy + bpy) / 2, "l = %.0f mm" % L, 11, WARN, "start", "600"))
     # dimension d
@@ -194,7 +195,7 @@ def characteristic_svg():
     th = [theta_from_phi(p) for p in phi]
     peak_i = max(range(len(th)), key=lambda i: th[i])
     xr = (-110.0, 110.0)
-    yr = (-4.2, 4.2)
+    yr = (-4.8, 4.8)
 
     def X(v):
         return l_ + (v - xr[0]) / (xr[1] - xr[0]) * (W - l_ - r_)
@@ -235,10 +236,9 @@ def characteristic_svg():
     # peaks
     for i in (peak_i, len(th) - 1 - peak_i):
         s.append("<circle cx='%.1f' cy='%.1f' r='4' fill='%s'/>" % (X(phi[i]), Y(th[i]), WARN))
-    s.append(txt(X(phi[peak_i]) - 14, Y(th[peak_i]) - 24,
-                 "tepe: φ = %.1f°, θ = %.3f°" % (phi[peak_i], th[peak_i]), 11, WARN, "end", "600"))
-    s.append(txt(X(phi[peak_i]) - 14, Y(th[peak_i]) - 10,
-                 "sonrasında θ geri döner → tekillik", 11, WARN, "end"))
+    s.append(txt(X(xr[1]) - 6, Y(th[peak_i]) + 58,
+                 "tepe  φ %.1f°  θ %.3f°" % (phi[peak_i], th[peak_i]), 11, WARN, "end", "600"))
+    s.append(txt(X(xr[1]) - 6, Y(th[peak_i]) + 73, "sonrası tekillik", 11, WARN, "end"))
 
     # command limit markers
     for v in (-PHI_LIMIT, PHI_LIMIT):
@@ -270,10 +270,28 @@ def architecture_svg():
         return out
 
     def arrow(x1, y1, x2, y2, label, above=True, color=ACCENT):
+        """The label is pushed off the arrow along its normal, so it clears the
+        line whatever direction the arrow runs in."""
         out = ["<line x1='%.1f' y1='%.1f' x2='%.1f' y2='%.1f' stroke='%s' stroke-width='1.8' "
                "marker-end='url(#ar)'/>" % (x1, y1, x2, y2, color)]
-        mx, my = (x1 + x2) / 2, (y1 + y2) / 2
-        out.append(txt(mx, my - 7 if above else my + 15, label, 10.5, color, "middle", "600"))
+        dx, dy = x2 - x1, y2 - y1
+        ln = math.hypot(dx, dy) or 1.0
+        nx, ny = -dy / ln, dx / ln          # unit normal
+        # the normal of a left-to-right arrow points down, so "above" is -n
+        side = -1.0 if above else 1.0
+        half = 0.27 * 10.5 * len(label)     # rough half-width of the label
+        if abs(ny) > abs(nx):               # mostly horizontal arrow
+            # A slanted arrow would otherwise cut through the ends of a wide
+            # label, so the clearance grows with the slope and the width.
+            slope = abs(dy / dx) if abs(dx) > 1e-6 else 0.0
+            anchor = "middle"
+            mx = (x1 + x2) / 2
+            my = (y1 + y2) / 2 + side * (13.0 + half * slope) + 4
+        else:                               # vertical or steep: push sideways
+            off, anchor = 10.0, ("start" if nx * side > 0 else "end")
+            mx = (x1 + x2) / 2 + nx * side * off
+            my = (y1 + y2) / 2 + 4
+        out.append(txt(mx, my, label, 10.5, color, anchor, "600"))
         return out
 
     s.append("<defs><marker id='ar' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' "
@@ -313,155 +331,192 @@ def architecture_svg():
 # --- drawing 4: wiring ------------------------------------------------------
 
 def wiring_svg():
-    """Connection diagram: which pin goes where, and the three details that
-    cost the most time to get right (single-wire UART, AS5600 DIR, common
-    ground)."""
-    W, H = 1140, 750
-    RAIL = 680
-    COLL = 905                      # ground collector, right of the boxes
+    """Connection diagram: which pin goes where, and the details that cost the
+    most time to get right (single-wire UART, AS5600 DIR, common ground).
+
+    Pins are stacked by the layout code rather than placed by hand, so a
+    label can never land on the block header or on its neighbour.
+    """
+    W, H = 1180, 840
+    RAIL = 636                      # common ground rail
+    COLL = 916                      # ground collector, right of the blocks
+    PITCH, GAP, HEAD = 23.0, 11.0, 52.0
     s = head(W, H, "Wiring")
     s.append(txt(24, 32, "Wiring", 15, INK, weight="600"))
-    s.append(txt(24, 52, "Verified against the running rig. Pin numbers are the single source "
-                 "of truth in firmware/src/board_pins.h.", 12, MUTED))
+    s.append(txt(24, 52, "Verified against the running rig. Pin numbers come from "
+                 "firmware/src/board_pins.h, the same file the firmware builds against.",
+                 12, MUTED))
 
-    def box(x, y, w, h, title, sub="", accent=INK, fill="#f6f8fa"):
-        out = ["<rect x='%.1f' y='%.1f' width='%.1f' height='%.1f' rx='7' fill='%s' "
-               "stroke='%s' stroke-width='1.6'/>" % (x, y, w, h, fill, accent)]
+    out = []
+    pins = {}
+
+    def block(name, x, y, w, title, sub, left=(), right=(), accent=INK, fill="#f6f8fa"):
+        """Draw a block and remember where each of its pins sits."""
+        def stack(items):
+            ys, cur = {}, y + HEAD
+            for it in items:
+                if it is None:
+                    cur += GAP
+                    continue
+                ys[it] = cur
+                cur += PITCH
+            return ys, cur
+
+        ly, lend = stack(left)
+        ry, rend = stack(right)
+        h = max(lend, rend) - y + 6
+        out.append("<rect x='%.1f' y='%.1f' width='%.1f' height='%.1f' rx='7' fill='%s' "
+                   "stroke='%s' stroke-width='1.6'/>" % (x, y, w, h, fill, accent))
         out.append(txt(x + 14, y + 24, title, 12.5, accent, weight="600"))
         if sub:
-            out.append(txt(x + 14, y + 40, sub, 10, MUTED))
-        return out
+            out.append(txt(x + 14, y + 41, sub, 10, MUTED))
+        for label, yy in ly.items():
+            out.append(txt(x + 12, yy + 4, label, 10.5, INK))
+            pins[(name, label)] = (x, yy)
+        for label, yy in ry.items():
+            colour = WARN if label.startswith("DIR") else INK
+            out.append(txt(x + w - 12, yy + 4, label, 10.5, colour, "end"))
+            pins[(name, label)] = (x + w, yy)
+        return x, y, w, h
 
-    def pin(x, y, label, side="right", color=INK):
-        """A pin label sitting just inside the box edge."""
-        dx = -10 if side == "right" else 10
-        anc = "end" if side == "right" else "start"
-        return [txt(x + dx, y + 4, label, 10.5, color, anc)]
+    def P(block_name, label):
+        return pins[(block_name, label)]
 
-    def wire(pts, color=INK, w=1.5, dash=None):
-        d = " stroke-dasharray='%s'" % dash if dash else ""
+    def wire(pts, color=INK, w=1.5):
         p = " ".join("%.1f,%.1f" % (x, y) for x, y in pts)
-        return ["<polyline points='%s' fill='none' stroke='%s' stroke-width='%.1f' "
-                "stroke-linejoin='round' stroke-linecap='round'%s/>" % (p, color, w, d)]
+        out.append("<polyline points='%s' fill='none' stroke='%s' stroke-width='%.1f' "
+                   "stroke-linejoin='round' stroke-linecap='round'/>" % (p, color, w))
 
     def junction(x, y, color=INK):
-        return ["<circle cx='%.1f' cy='%.1f' r='3.4' fill='%s'/>" % (x, y, color)]
+        out.append("<circle cx='%.1f' cy='%.1f' r='3.4' fill='%s'/>" % (x, y, color))
 
-    def resistor(x, y, label, color=INK, vertical=False):
-        """Small box on a wire, the way a schematic marks a series part."""
+    def resistor(x, y, label, color=INK, vertical=False, below=False):
         if vertical:
-            out = ["<rect x='%.1f' y='%.1f' width='14' height='34' rx='2' fill='#ffffff' "
-                   "stroke='%s' stroke-width='1.4'/>" % (x - 7, y - 17, color)]
-            out.append(txt(x + 12, y + 4, label, 10, color, "start", "600"))
+            out.append("<rect x='%.1f' y='%.1f' width='14' height='32' rx='2' fill='#ffffff' "
+                       "stroke='%s' stroke-width='1.4'/>" % (x - 7, y - 16, color))
+            out.append(txt(x + 13, y + 4, label, 10, color, "start", "600"))
         else:
-            out = ["<rect x='%.1f' y='%.1f' width='38' height='14' rx='2' fill='#ffffff' "
-                   "stroke='%s' stroke-width='1.4'/>" % (x - 19, y - 7, color)]
-            out.append(txt(x, y - 12, label, 10, color, "middle", "600"))
-        return out
+            out.append("<rect x='%.1f' y='%.1f' width='36' height='13' rx='2' fill='#ffffff' "
+                       "stroke='%s' stroke-width='1.4'/>" % (x - 18, y - 6.5, color))
+            out.append(txt(x, y + 20 if below else y - 11, label, 10, color, "middle", "600"))
 
-    def label(x, y, text, color=ACCENT, anchor="start"):
-        return [txt(x, y, text, 10.5, color, anchor, "600")]
+    def note(x, y, text, color=MUTED, anchor="start"):
+        out.append(txt(x, y, text, 10.5, color, anchor, "600"))
 
-    # ---- blocks
-    s += box(60, 100, 240, 480, "ESP32-S3 DevKitC-1", "N8 · USB-Serial-JTAG + CH343")
-    s += box(620, 110, 260, 210, "TMC2208", "UART mode · 1/256 · IRUN 10 (0.61 A rms)")
-    s += box(620, 345, 260, 135, "AS5600", "I2C 400 kHz · 4096 counts/rev")
-    s += box(620, 505, 260, 115, "HC-SR04", "backup sensor, not used")
-    s += box(950, 110, 160, 70, "12 V supply", "motor rail")
-    s += box(950, 210, 160, 90, "NEMA 17", "200 steps/rev")
+    # ---- blocks ------------------------------------------------------------
+    block("esp", 60, 96, 244, "ESP32-S3 DevKitC-1", "N8 · USB-Serial-JTAG + CH343 bridge",
+          right=("3V3", None, "GPIO4  STEP", "GPIO5  DIR", "GPIO15  EN", None,
+                 "GPIO6  UART TX", "GPIO7  UART RX", None, "GPIO8  SDA", "GPIO9  SCL",
+                 None, "GPIO10  TRIG", "GPIO11  ECHO", "5V  (USB)", None,
+                 "GPIO16  loop probe", "GND"))
+    block("tmc", 636, 96, 250, "TMC2208", "UART mode · 1/256 · IRUN 10 → 0.61 A rms",
+          left=("VIO 3V3", "STEP", "DIR", "EN", None, "PDN_UART", "CLK"),
+          right=("VM +12 V", None, "M1A M1B M2A M2B", None, "GND"))
+    block("enc", 636, 348, 250, "AS5600", "I²C 400 kHz · 4096 counts/rev",
+          left=("VCC 3V3", "SDA", "SCL"), right=("GND", "DIR"))
+    block("son", 636, 500, 250, "HC-SR04", "backup sensor, not in use",
+          left=("VCC 5V", "TRIG", "ECHO"), right=("GND",))
+    block("mot", 950, 96, 170, "NEMA 17", "200 steps/rev · 1/256 microstep")
+    block("psu", 950, 180, 170, "12 V supply", "motor rail only", left=("+", "−"))
 
-    # ---- ESP pins
-    esp = [(145, "3V3"), (185, "GPIO4  STEP"), (210, "GPIO5  DIR"), (235, "GPIO15  EN"),
-           (265, "GPIO6  UART TX"), (290, "GPIO7  UART RX"), (350, "GPIO8  SDA"),
-           (375, "GPIO9  SCL"), (440, "GPIO10  TRIG"), (468, "GPIO11  ECHO"),
-           (505, "5V  (USB)"), (530, "GPIO16  loop probe"), (556, "GND")]
-    for y, name in esp:
-        s += pin(300, y, name)
+    # ---- 3V3 to both 3.3 V loads -------------------------------------------
+    x3 = 332
+    wire([P("esp", "3V3"), (x3, P("esp", "3V3")[1]), (x3, P("enc", "VCC 3V3")[1]),
+          P("enc", "VCC 3V3")])
+    wire([(x3, P("tmc", "VIO 3V3")[1]), P("tmc", "VIO 3V3")])
+    junction(x3, P("tmc", "VIO 3V3")[1])
 
-    # ---- TMC pins
-    for y, name in ((165, "VIO 3V3"), (190, "STEP"), (212, "DIR"), (234, "EN"),
-                    (265, "PDN_UART"), (292, "CLK")):
-        s += pin(620, y, name, "left")
-    for y, name in ((140, "VM +12 V"), (250, "M1A M1B M2A M2B"), (300, "GND")):
-        s += pin(880, y, name)
+    # ---- step, direction, enable -------------------------------------------
+    for name, tgt, mx in (("GPIO4  STEP", "STEP", 358), ("GPIO5  DIR", "DIR", 374),
+                          ("GPIO15  EN", "EN", 390)):
+        ex, ey = P("esp", name)
+        tx, ty = P("tmc", tgt)
+        wire([(ex, ey), (mx, ey), (mx, ty), (tx, ty)], ACCENT)
 
-    # ---- AS5600 / HC-SR04 pins
-    for y, name in ((375, "VCC 3V3"), (400, "SDA"), (422, "SCL")):
-        s += pin(620, y, name, "left")
-    s += pin(880, 448, "GND")
-    s += pin(880, 465, "DIR", "right", WARN)
-    for y, name in ((528, "VCC 5V"), (550, "TRIG"), (578, "ECHO")):
-        s += pin(620, y, name, "left")
-    s += pin(880, 600, "GND")
-    for y, name in ((140, "+"), (165, "−")):
-        s += pin(950, y, name, "left")
+    # ---- single-wire UART ---------------------------------------------------
+    node = 574
+    tx_x, tx_y = P("esp", "GPIO6  UART TX")
+    rx_x, rx_y = P("esp", "GPIO7  UART RX")
+    px, py = P("tmc", "PDN_UART")
+    wire([(tx_x, tx_y), (node, tx_y), (node, py), (px, py)], WARN, 1.8)
+    resistor(460, tx_y, "1 kΩ", WARN)
+    wire([(rx_x, rx_y), (node, rx_y), (node, py)], WARN, 1.8)
+    junction(node, py, WARN)
+    note(562, (tx_y + P("tmc", "EN")[1]) / 2 - 2, "single-wire half-duplex", WARN, "middle")
 
-    # ---- 3V3 rail
-    s += wire([(300, 145), (330, 145), (330, 375), (620, 375)])
-    s += wire([(330, 165), (620, 165)])
-    s += junction(330, 165)
-    s += label(340, 138, "3V3", MUTED)
+    # ---- I2C ----------------------------------------------------------------
+    for name, tgt, mx in (("GPIO8  SDA", "SDA", 408), ("GPIO9  SCL", "SCL", 424)):
+        ex, ey = P("esp", name)
+        tx, ty = P("enc", tgt)
+        wire([(ex, ey), (mx, ey), (mx, ty), (tx, ty)], ACCENT)
 
-    # ---- step / dir / enable
-    s += wire([(300, 185), (362, 185), (362, 190), (620, 190)], ACCENT)
-    s += wire([(300, 210), (378, 210), (378, 212), (620, 212)], ACCENT)
-    s += wire([(300, 235), (394, 235), (394, 234), (620, 234)], ACCENT)
-    s += label(455, 178, "LEDC square wave, counted back by PCNT", MUTED, "middle")
-    s += label(455, 252, "LOW = driver enabled", MUTED, "middle")
+    # ---- ultrasonic: supply, trigger, divided echo --------------------------
+    wire([P("esp", "5V  (USB)"), (556, P("esp", "5V  (USB)")[1]),
+          (556, P("son", "VCC 5V")[1]), P("son", "VCC 5V")], MUTED)
+    wire([P("esp", "GPIO10  TRIG"), (528, P("esp", "GPIO10  TRIG")[1]),
+          (528, P("son", "TRIG")[1]), P("son", "TRIG")], MUTED)
+    ex, ey = P("esp", "GPIO11  ECHO")
+    sx, sy = P("son", "ECHO")
+    div = 440
+    wire([(sx, sy), (div, sy), (div, ey), (ex, ey)], MUTED)
+    resistor(500, sy, "1 kΩ", MUTED, below=True)
+    junction(div, sy, MUTED)
+    wire([(div, sy), (div, RAIL)], MUTED)
+    resistor(div, (sy + RAIL) / 2, "2 kΩ", MUTED, vertical=True)
+    note(div - 14, (sy + RAIL) / 2 + 4, "5 V → 3.3 V", MUTED, "end")
 
-    # ---- single-wire UART: TX through 1k, RX straight, joined at the pin
-    s += wire([(300, 265), (560, 265), (620, 265)], WARN, 1.8)
-    s += resistor(452, 265, "1 kΩ", WARN)
-    s += wire([(300, 290), (560, 290), (560, 265)], WARN, 1.8)
-    s += junction(560, 265, WARN)
-    s += label(452, 312, "single-wire half-duplex: TX through 1 kΩ, RX direct", WARN, "middle")
+    # ---- grounds ------------------------------------------------------------
+    gx, gy = P("esp", "GND")
+    wire([(gx, gy), (350, gy), (350, RAIL)])
+    wire([P("tmc", "GND"), (COLL, P("tmc", "GND")[1]), (COLL, RAIL)])
+    for blk in ("enc", "son"):
+        wire([P(blk, "GND"), (COLL, P(blk, "GND")[1])])
+        junction(COLL, P(blk, "GND")[1])
+    wire([P("psu", "−"), (COLL, P("psu", "−")[1]), (COLL, P("tmc", "GND")[1])])
+    cx, cy = P("tmc", "CLK")
+    wire([(cx, cy), (610, cy), (610, RAIL)])
+    junction(610, RAIL)
+    wire([(120, RAIL), (COLL, RAIL)], INK, 2.4)
+    note(124, RAIL + 20, "common ground", MUTED)
 
-    # ---- I2C
-    s += wire([(300, 350), (410, 350), (410, 400), (620, 400)], ACCENT)
-    s += wire([(300, 375), (426, 375), (426, 422), (620, 422)], ACCENT)
-    s += label(470, 452, "10 kΩ pull-ups on the breakout; internal ones off", MUTED, "middle")
+    # ---- the one that bites -------------------------------------------------
+    dx, dy = P("enc", "DIR")
+    wire([(dx, dy), (COLL - 20, dy), (COLL - 20, RAIL - 26), (COLL, RAIL - 26)], WARN, 2.0)
+    junction(COLL, RAIL - 26, WARN)
+    for k, line in enumerate(["DIR gets its own wire", "to ground — see note 2"]):
+        note(COLL + 16, dy + 24 + k * 15, line, WARN)
 
-    # ---- HC-SR04: 5 V supply, trigger and the divided echo
-    s += wire([(300, 505), (545, 505), (545, 528), (620, 528)], MUTED)
-    s += wire([(300, 440), (520, 440), (520, 550), (620, 550)], MUTED)
-    s += wire([(620, 578), (430, 578), (430, 468), (300, 468)], MUTED)
-    s += resistor(487, 578, "1 kΩ", MUTED)
-    s += junction(430, 578, MUTED)
-    s += wire([(430, 578), (430, RAIL)], MUTED)
-    s += resistor(430, 625, "2 kΩ", MUTED, vertical=True)
-    s += label(404, 630, "5 V → 3.3 V", MUTED, "end")
+    # ---- power and motor ----------------------------------------------------
+    wire([P("psu", "+"), (906, P("psu", "+")[1]), (906, P("tmc", "VM +12 V")[1]),
+          P("tmc", "VM +12 V")], WARN, 2.0)
+    mx, my = P("tmc", "M1A M1B M2A M2B")
+    wire([(mx, my), (932, my), (932, 125), (950, 125)], INK, 2.4)
 
-    # ---- grounds
-    s += wire([(300, 556), (340, 556), (340, RAIL)])
-    s += wire([(880, 300), (COLL, 300), (COLL, RAIL)])
-    s += wire([(880, 448), (COLL, 448)])
-    s += wire([(880, 600), (COLL, 600)])
-    s += wire([(620, 292), (596, 292), (596, RAIL)])
-    s += wire([(950, 165), (COLL, 165), (COLL, 300)])
-    for y in (448, 600):
-        s += junction(COLL, y)
-    s += wire([(120, RAIL), (COLL, RAIL)], INK, 2.4)
-    s += label(128, RAIL + 20, "common ground — ESP32, driver logic, motor supply", MUTED)
-    s += label(588, 332, "CLK → GND (internal 12 MHz oscillator)", MUTED, "end")
-
-    # ---- the one that bites: AS5600 DIR
-    s += wire([(880, 465), (COLL - 18, 465), (COLL - 18, RAIL - 24), (COLL, RAIL - 24)], WARN, 2.0)
-    s += junction(COLL, RAIL - 24, WARN)
-    s += label(922, 402, "DIR needs its own wire to GND.", WARN)
-    s += label(922, 418, "Left floating it picks up the I2C", WARN)
-    s += label(922, 434, "lines and flips polarity between", WARN)
-    s += label(922, 450, "reads — the angle comes back as", WARN)
-    s += label(922, 466, "x and 4096−x alternately.", WARN)
-
-    # ---- power / motor
-    s += wire([(950, 140), (880, 140)], WARN, 2.0)
-    s += wire([(880, 250), (950, 250)], INK, 2.4)
-    s += label(915, 236, "4 wires", MUTED, "middle")
-
-    s.append(txt(24, H - 30, "MS1 and MS2 are left floating: microstepping is selected over UART "
-                 "(mstep_reg_select = 1). AS5600 OUT and GPO unused.", 10.5, MUTED))
-    s.append(txt(24, H - 14, "GPIO16 toggles once per control tick so a logic analyser can read "
-                 "the loop period independently of the firmware's own measurement.", 10.5, MUTED))
+    s += out
+    notes = [
+        "1.  PDN_UART is a single-wire half-duplex pin. TX reaches it through 1 kΩ, RX "
+        "connects straight to the same node; without the resistor the ESP32 drives over "
+        "the driver's reply and every read-back returns 0xFF.",
+        "2.  AS5600 DIR must be tied to ground with its own wire. Left floating it picks up "
+        "the I²C lines and flips polarity between reads, reporting the same angle "
+        "alternately as x and 4096 − x.",
+        "3.  HC-SR04 drives ECHO at 5 V, so it reaches GPIO11 through a 1 kΩ / 2 kΩ divider. "
+        "The sensor is wired but unused: the ball's position comes from the camera.",
+        "4.  MS1 and MS2 float — the microstep setting arrives over UART "
+        "(mstep_reg_select = 1). CLK to ground selects the driver's internal 12 MHz "
+        "oscillator. EN is active low. AS5600 OUT and GPO stay unconnected.",
+        "5.  The AS5600 breakout carries its own 10 kΩ pull-ups, so the ESP32's internal "
+        "ones are disabled. Bus runs at 400 kHz.",
+        "6.  GPIO16 toggles once per control tick so a logic analyser can read the loop "
+        "period independently of the firmware's own measurement.",
+    ]
+    box_h = 46 + len(notes) * 16 + 10
+    ly = H - box_h - 18
+    s.append("<rect x='40' y='%d' width='%d' height='%d' rx='7' fill='#f6f8fa' "
+             "stroke='#d0d7de' stroke-width='1.2'/>" % (ly, W - 80, box_h))
+    s.append(txt(58, ly + 24, "Notes", 12, INK, weight="600"))
+    for k, line in enumerate(notes):
+        s.append(txt(58, ly + 46 + k * 16, line, 10.5, MUTED))
     s.append("</svg>")
     return NL.join(s)
 
