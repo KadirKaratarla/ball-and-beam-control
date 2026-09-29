@@ -32,13 +32,13 @@ class Plots(QWidget):
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
 
-        self.p_x = pg.PlotWidget(title="Top konumu (cm)")
+        self.p_x = pg.PlotWidget(title="Ball position (cm)")
         self.p_x.addLegend(offset=(10, 5))
         self.p_x.setYRange(0, 45)
         self.c_x = self.p_x.plot(pen=pg.mkPen((255, 140, 0), width=2), name="x")
         self.c_xs = self.p_x.plot(pen=pg.mkPen((255, 200, 120), width=1, style=pg.QtCore.Qt.DashLine), name="setpoint")
 
-        self.p_th = pg.PlotWidget(title="Beam açısı komutu ve PID terimleri (°)")
+        self.p_th = pg.PlotWidget(title="Beam angle command and PID terms (°)")
         self.p_th.addLegend(offset=(10, 5))
         self.p_th.setYRange(-3.5, 3.5)
         self.c_th = self.p_th.plot(pen=pg.mkPen((235, 235, 235), width=2), name="θ")
@@ -46,10 +46,10 @@ class Plots(QWidget):
         self.c_i = self.p_th.plot(pen=pg.mkPen((110, 220, 120), width=1), name="I")
         self.c_d = self.p_th.plot(pen=pg.mkPen((200, 130, 255), width=1), name="D")
 
-        self.p_enc = pg.PlotWidget(title="Krank (encoder, ° yataydan) ve takip hatası (sayım)")
+        self.p_enc = pg.PlotWidget(title="Crank (encoder, ° from level) and follow error (counts)")
         self.p_enc.addLegend(offset=(10, 5))
-        self.c_enc = self.p_enc.plot(pen=pg.mkPen((235, 235, 235), width=1), name="krank °")
-        self.c_fol = self.p_enc.plot(pen=pg.mkPen((255, 110, 110), width=1), name="takip")
+        self.c_enc = self.p_enc.plot(pen=pg.mkPen((235, 235, 235), width=1), name="crank °")
+        self.c_fol = self.p_enc.plot(pen=pg.mkPen((255, 110, 110), width=1), name="follow")
 
         for p in (self.p_x, self.p_th, self.p_enc):
             p.showGrid(x=True, y=True, alpha=0.3)

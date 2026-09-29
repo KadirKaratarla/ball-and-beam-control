@@ -19,12 +19,12 @@ DRV_OTPW, DRV_OT, DRV_S2GA, DRV_S2GB, DRV_S2VSA, DRV_S2VSB, DRV_OLA, DRV_OLB = (
 DRV_T120, DRV_T143, DRV_T150, DRV_T157 = (1 << i for i in range(8, 12))
 
 FAULT_TEXT = {
-    1: "ENCODER ARALIK DIŞI: mil çalışma yayının dışında -- mekanizmayı kontrol edin",
-    2: "TAKİP HATASI: komut ile encoder uyuşmuyor (adım kaybı / kablo / mekanik takılma)",
-    3: "ENCODER CEVAP VERMİYOR: AS5600 kablosu / I2C hattı",
-    4: "TMC2208 RESET: sürücü registerları kayboldu (besleme / VM)",
-    5: "TMC2208 UART CEVAP VERMİYOR: sürücü kablosu / PDN_UART",
-    6: "BEAM 6'DA DEĞİL: beam'i elle indirip RESET_FAULT / RUN verin",
+    1: "ENCODER OUT OF RANGE: shaft outside its working arc -- check the mechanism",
+    2: "FOLLOW ERROR: command and encoder disagree (lost steps / wiring / binding)",
+    3: "ENCODER NOT RESPONDING: AS5600 wiring / I2C bus",
+    4: "TMC2208 RESET: driver registers lost (supply / VM)",
+    5: "TMC2208 UART NOT RESPONDING: driver wiring / PDN_UART",
+    6: "BEAM NOT AT 6 O'CLOCK: lower the beam by hand, then RESET_FAULT / RUN",
 }
 
 STYLE = """
@@ -125,19 +125,19 @@ class MainWindow(QMainWindow):
 
         # --- device strips + warning strip ---
         top = QHBoxLayout()
-        self.esp_strip = strip_label("ESP32 aranıyor ...", GREY)
-        self.cam_strip = strip_label("Kamera aranıyor ...", GREY)
-        self.btn_rescan = QPushButton("Yeniden tara")
-        self.btn_rescan.setToolTip("Kamerayı yeniden ara (ESP32 otomatik bulunur)")
+        self.esp_strip = strip_label("Looking for the ESP32 ...", GREY)
+        self.cam_strip = strip_label("Looking for the camera ...", GREY)
+        self.btn_rescan = QPushButton("Rescan")
+        self.btn_rescan.setToolTip("Search for the camera again (the ESP32 is found automatically)")
         self.btn_rescan.clicked.connect(self.camera.rescan)
-        self.btn_rec = QPushButton("●  Kayıt")
+        self.btn_rec = QPushButton("●  Record")
         self.btn_rec.setCheckable(True)
         self.btn_rec.toggled.connect(self.toggle_record)
-        self.btn_view = QPushButton("Kamera")
+        self.btn_view = QPushButton("Camera")
         self.btn_view.setCheckable(True)
-        self.btn_view.setToolTip("Şema yerine canlı takip görüntüsü")
+        self.btn_view.setToolTip("Live tracking view instead of the schematic")
         self.btn_view.toggled.connect(self.toggle_view)
-        self.btn_center = QPushButton("Grafikleri ortala")
+        self.btn_center = QPushButton("Recentre plots")
         self.btn_center.clicked.connect(lambda: self.plots.recenter())
         top.addWidget(self.esp_strip, 1)
         top.addWidget(self.cam_strip, 1)
@@ -160,7 +160,7 @@ class MainWindow(QMainWindow):
         self.stack.setFixedHeight(190)
         self.beam = BeamView(beam_cm)
         self.beam.setpoint_clicked.connect(self.send_setpoint)
-        self.cam_view = QLabel("kamera görüntüsü bekleniyor")
+        self.cam_view = QLabel("waiting for the camera image")
         self.cam_view.setAlignment(Qt.AlignCenter)
         self.cam_view.setStyleSheet("background:#0e1114; color:#8d96a3;")
         self.stack.addWidget(self.beam)
@@ -187,7 +187,7 @@ class MainWindow(QMainWindow):
         left.addWidget(sp_box)
 
         # gains
-        g_box = QGroupBox("PID kazançları")
+        g_box = QGroupBox("PID gains")
         g_lay = QGridLayout(g_box)
         self.gain_spins = {}
         for col, (key, label, rng, step) in enumerate((("kp", "Kp  °/cm", (0, 3), 0.05), ("ki", "Ki  °/(cm·s)", (0, 1), 0.05),
@@ -201,11 +201,11 @@ class MainWindow(QMainWindow):
             sb.setDecimals(3)
             g_lay.addWidget(sb, 1, col)
             self.gain_spins[key] = sb
-        self.gain_status = QLabel("CONFIG bekleniyor")
+        self.gain_status = QLabel("waiting for CONFIG")
         self.gain_status.setObjectName("cellTitle")
-        self.btn_apply = QPushButton("Uygula")
+        self.btn_apply = QPushButton("Apply")
         self.btn_apply.clicked.connect(self.send_gains)
-        self.btn_defaults = QPushButton("Varsayılana dön")
+        self.btn_defaults = QPushButton("Defaults")
         self.btn_defaults.clicked.connect(self.restore_defaults)
         g_lay.addWidget(self.gain_status, 2, 0, 1, 2)
         g_lay.addWidget(self.btn_apply, 2, 2)
@@ -213,7 +213,7 @@ class MainWindow(QMainWindow):
         left.addWidget(g_box)
 
         # modes with state lights
-        m_box = QGroupBox("Mod")
+        m_box = QGroupBox("Mode")
         m_lay = QHBoxLayout(m_box)
         self.mode_btns = {}
         for text, mode in (("RUN", P.MODE_RUN), ("LEVEL", P.MODE_LEVEL), ("STOP", P.MODE_STOP), ("RESET_FAULT", P.MODE_RESET_FAULT)):
@@ -237,17 +237,17 @@ class MainWindow(QMainWindow):
                 g.addWidget(c, i // cols, i % cols)
             self.tabs.addTab(w, name)
 
-        tab("Genel", (("state", "Durum"), ("x", "Top konumu"), ("xset", "Setpoint"),
-                      ("theta", "Beam açısı θ"), ("phi", "Krank φ"), ("loop", "Döngü µs (ort/maks)"),
-                      ("overrun", "Aşım / kaçırılan"), ("age", "Konum yaşı"), ("rtt", "RTT")))
-        tab("Encoder", (("enc", "Mil (sayım, 6'dan)"), ("follow", "Takip hatası"), ("lag", "Encoder telafisi"),
-                        ("i2c", "I2C hataları"), ("rej", "Makullük retleri"), ("dir", "DIR arızası")))
-        tab("Motor", (("cs", "Akım (CS)"), ("temp", "Sıcaklık eşiği"), ("drvflags", "Bayraklar"),
-                      ("tmcreset", "Reset"), ("tmcuart", "UART hataları"), ("vel", "Adım hızı"), ("drv", "DRV_STATUS")))
-        tab("Link", (("pkt", "Konum paketleri"), ("crc", "CRC hataları"), ("gap", "Sıra boşlukları"),
-                     ("cmd", "Komut ok / kötü"), ("txd", "ESP tx düşen"), ("recon", "Yeniden bağlanma")))
-        tab("Kamera", (("camstate", "Kamera"), ("fps", "Kare hızı"), ("camdetail", "Ayrıntı"),
-                       ("camrestart", "Yeniden başlatma")), cols=1)
+        tab("General", (("state", "State"), ("x", "Ball position"), ("xset", "Setpoint"),
+                      ("theta", "Beam angle θ"), ("phi", "Crank φ"), ("loop", "Loop µs (mean/max)"),
+                      ("overrun", "Overruns / missed"), ("age", "Position age"), ("rtt", "RTT")))
+        tab("Encoder", (("enc", "Shaft (counts from 6)"), ("follow", "Follow error"), ("lag", "Lag compensation"),
+                        ("i2c", "I2C errors"), ("rej", "Plausibility rejects"), ("dir", "DIR faults")))
+        tab("Motor", (("cs", "Current (CS)"), ("temp", "Temperature flag"), ("drvflags", "Flags"),
+                      ("tmcreset", "Resets"), ("tmcuart", "UART errors"), ("vel", "Step rate"), ("drv", "DRV_STATUS")))
+        tab("Link", (("pkt", "Position packets"), ("crc", "CRC errors"), ("gap", "Sequence gaps"),
+                     ("cmd", "Commands ok / bad"), ("txd", "ESP tx dropped"), ("recon", "Reconnects")))
+        tab("Camera", (("camstate", "Camera"), ("fps", "Frame rate"), ("camdetail", "Detail"),
+                       ("camrestart", "Restarts")), cols=1)
         self.tabs.setMinimumHeight(150)
         left.addWidget(self.tabs, 1)
 
@@ -302,7 +302,7 @@ class MainWindow(QMainWindow):
     def send_gains(self):
         g = self.gain_spins
         self.link.set_gains(g["kp"].value(), g["ki"].value(), g["kd"].value(), g["tau"].value())
-        self.gain_status.setText("gönderildi, ACK bekleniyor")
+        self.gain_status.setText("sent, waiting for ACK")
 
     def restore_defaults(self):
         if self.defaults is None:
@@ -318,19 +318,19 @@ class MainWindow(QMainWindow):
     def toggle_record(self, on):
         if on:
             path = self.recorder.start()
-            self.btn_rec.setText("■  Kaydı durdur")
+            self.btn_rec.setText("■  Stop recording")
             self.rec_label.setText(path)
         else:
             self.recorder.stop()
-            self.btn_rec.setText("●  Kayıt")
-            self.rec_label.setText(f"{self.recorder.rows} satır -> {self.recorder.path}")
+            self.btn_rec.setText("●  Record")
+            self.rec_label.setText(f"{self.recorder.rows} rows -> {self.recorder.path}")
 
     def toggle_view(self, on):
         self.camera.set_view(on)
         self.stack.setCurrentIndex(1 if on else 0)
         if not on:
             self.cam_view.clear()
-            self.cam_view.setText("kamera görüntüsü bekleniyor")
+            self.cam_view.setText("waiting for the camera image")
 
     # --- incoming ------------------------------------------------------------
     @Slot(str)
@@ -357,7 +357,7 @@ class MainWindow(QMainWindow):
         if self.recorder.active:
             self.recorder.sent(pos_cm, valid, t_send)
         if warning:
-            self.warnings["cam"] = ("warn", "Kamera: takip sağlığı uyarısı (alan / tespit oranı)")
+            self.warnings["cam"] = ("warn", "Camera: tracking health warning (blob area / detection rate)")
         else:
             self.warnings.pop("cam", None)
 
@@ -367,7 +367,7 @@ class MainWindow(QMainWindow):
         self.defaults = (c.kp_def, c.ki_def, c.kd_def, c.d_tau_def)
         for key, val in zip(("kp", "ki", "kd", "tau"), (c.kp, c.ki, c.kd, c.d_tau_s)):
             self.gain_spins[key].setValue(val)
-        self.gain_status.setText("varsayılan (ESP)" if c.defaults else "değiştirilmiş")
+        self.gain_status.setText("defaults (ESP)" if c.defaults else "modified")
         self.plots.level_counts = c.level_counts
         if first:
             self.send_setpoint(c.x_set_0p1mm / 100)
@@ -376,11 +376,11 @@ class MainWindow(QMainWindow):
         name = {P.T_SETPOINT: "SETPOINT", P.T_GAINS: "GAINS", P.T_MODE: "MODE", P.T_GET_CONFIG: "GET_CONFIG"}.get(a.cmd_type, f"0x{a.cmd_type:02X}")
         res = P.ACK_NAMES.get(a.result, str(a.result))
         if a.cmd_type == P.T_GAINS:
-            self.gain_status.setText("uygulandı" if a.result == P.ACK_OK else f"REDDEDİLDİ: {res}")
+            self.gain_status.setText("applied" if a.result == P.ACK_OK else f"REJECTED: {res}")
             if a.result == P.ACK_OK:
                 self.link.request_config()
         if a.result != P.ACK_OK:
-            self.warnings["ack"] = ("warn", f"{name} komutu reddedildi: {res}")
+            self.warnings["ack"] = ("warn", f"{name} command rejected: {res}")
         else:
             self.warnings.pop("ack", None)
 
@@ -415,27 +415,27 @@ class MainWindow(QMainWindow):
         # device strips
         if self.link.connected:
             rtt = self.link.stats.get("rtt_ms")
-            self._strip(self.esp_strip, f"ESP32 bağlı  {self.link.port}   RTT {rtt:.1f} ms   telemetri {self.telem_rate}/s"
-                        if rtt is not None else f"ESP32 bağlı  {self.link.port}", GREEN)
+            self._strip(self.esp_strip, f"ESP32 connected  {self.link.port}   RTT {rtt:.1f} ms   telemetry {self.telem_rate}/s"
+                        if rtt is not None else f"ESP32 connected  {self.link.port}", GREEN)
             self.warnings.pop("esp_missing", None)
         else:
-            self._strip(self.esp_strip, "ESP32 TAKILI DEĞİL -- USB (COM12) bekleniyor, otomatik algılanır", RED)
-            self.warnings["esp_missing"] = ("fault", "ESP32 bağlı değil: kontrolör yok")
+            self._strip(self.esp_strip, "ESP32 NOT CONNECTED -- waiting for USB (COM12), found automatically", RED)
+            self.warnings["esp_missing"] = ("fault", "ESP32 not connected: no controller")
         cs = self.cam_state
         if cs == "tracking":
-            self._strip(self.cam_strip, f"Kamera takipte   {self.cam_rate} fps", GREEN)
+            self._strip(self.cam_strip, f"Camera tracking   {self.cam_rate} fps", GREEN)
             self.warnings.pop("cam_missing", None)
         elif cs in ("opening", "calibrating"):
-            self._strip(self.cam_strip, f"Kamera: {self.cam_detail}", ORANGE_C)
+            self._strip(self.cam_strip, f"Camera: {self.cam_detail}", ORANGE_C)
             self.warnings.pop("cam_missing", None)
         elif cs == "missing":
-            self._strip(self.cam_strip, f"KAMERA TAKILI DEĞİL -- takın, kendiliğinden bağlanır ({self.cam_detail})", RED)
-            self.warnings["cam_missing"] = ("fault", "Kamera yok: top konumu gelmiyor, ESP beam'i yatayda tutuyor")
+            self._strip(self.cam_strip, f"CAMERA NOT CONNECTED -- plug it in, it reconnects by itself ({self.cam_detail})", RED)
+            self.warnings["cam_missing"] = ("fault", "No camera: no ball position, the ESP holds the beam level")
         elif cs == "error":
-            self._strip(self.cam_strip, f"Kamera hatası: {self.cam_detail}", RED)
-            self.warnings["cam_missing"] = ("fault", f"Kamera: {self.cam_detail}")
+            self._strip(self.cam_strip, f"Camera error: {self.cam_detail}", RED)
+            self.warnings["cam_missing"] = ("fault", f"Camera: {self.cam_detail}")
         else:
-            self._strip(self.cam_strip, "Kamera aranıyor ...", GREY)
+            self._strip(self.cam_strip, "Looking for the camera ...", GREY)
         cells["camstate"].set(cs)
         cells["camrestart"].set(str(getattr(self.camera, "cam_restarts", 0)))
         cells["camdetail"].set(self.cam_detail)
@@ -452,15 +452,15 @@ class MainWindow(QMainWindow):
             fault = P.FAULT_NAMES.get(t.fault, str(t.fault))
             cells["state"].set(state + (f"  ({fault})" if t.fault else ""),
                                {"RUN": "#7ee787", "FAULT": "#ff7b72", "STOP": "#ffa657"}.get(state))
-            cells["x"].set(f"{t.x_0p1mm / 100:6.2f} cm" if valid else "top yok")
+            cells["x"].set(f"{t.x_0p1mm / 100:6.2f} cm" if valid else "no ball")
             cells["xset"].set(f"{t.x_set_0p1mm / 100:5.1f} cm")
             cells["theta"].set(f"{t.theta / 100:+.2f}°   P {t.p / 100:+.2f}  I {t.i / 100:+.2f}  D {t.d / 100:+.2f}")
             cells["phi"].set(f"{t.phi_0p1deg / 10:+.1f}°")
             cells["enc"].set(f"{t.enc_counts}  ({t.enc_counts * 360 / 4096:.1f}°)")
-            cells["follow"].set(f"{t.follow_0p1 / 10:+.1f} sayım", "#ffa657" if abs(t.follow_0p1) > 500 else None)
-            cells["lag"].set(f"{t.lag_counts:+d} sayım")
-            cells["vel"].set(f"{t.cmd_vel_10 * 10} µadım/s")
-            cells["age"].set(f"seq {t.last_seq}" + ("  BAYAT" if t.flags & P.TF_LINK_STALE else ""))
+            cells["follow"].set(f"{t.follow_0p1 / 10:+.1f} counts", "#ffa657" if abs(t.follow_0p1) > 500 else None)
+            cells["lag"].set(f"{t.lag_counts:+d} counts")
+            cells["vel"].set(f"{t.cmd_vel_10 * 10} µsteps/s")
+            cells["age"].set(f"seq {t.last_seq}" + ("  STALE" if t.flags & P.TF_LINK_STALE else ""))
             # mode lights
             lit = {P.MODE_RUN: None, P.MODE_LEVEL: None, P.MODE_STOP: None, P.MODE_RESET_FAULT: None}
             if t.state == 3:
@@ -475,15 +475,15 @@ class MainWindow(QMainWindow):
                 self.mode_btns[m].lit(col)
             # warnings from telemetry
             if t.state == 4:
-                self.warnings["fault"] = ("fault", "ARIZA -- " + FAULT_TEXT.get(t.fault, fault))
+                self.warnings["fault"] = ("fault", "FAULT -- " + FAULT_TEXT.get(t.fault, fault))
             else:
                 self.warnings.pop("fault", None)
             if t.state == 5:
-                self.warnings["stop"] = ("warn", "STOP: sürücü kapalı (RUN ile devam)")
+                self.warnings["stop"] = ("warn", "STOP: driver disabled (press RUN to continue)")
             else:
                 self.warnings.pop("stop", None)
             if abs(t.follow_0p1) > 1000:
-                self.warnings["follow"] = ("warn", f"Takip hatası yüksek: {t.follow_0p1 / 10:.0f} sayım (limit 150)")
+                self.warnings["follow"] = ("warn", f"Follow error high: {t.follow_0p1 / 10:.0f} counts (limit 150)")
             else:
                 self.warnings.pop("follow", None)
         elif not self.link.connected:
@@ -507,42 +507,42 @@ class MainWindow(QMainWindow):
             flags = []
             if d & DRV_OTPW: flags.append("OTPW")
             if d & DRV_OT: flags.append("OT")
-            if d & (DRV_S2GA | DRV_S2GB): flags.append("KISA DEVRE")
+            if d & (DRV_S2GA | DRV_S2GB): flags.append("SHORT")
             if d & (DRV_S2VSA | DRV_S2VSB): flags.append("S2VS")
-            if d & (DRV_OLA | DRV_OLB): flags.append("açık faz")
+            if d & (DRV_OLA | DRV_OLB): flags.append("OPEN LOAD")
             temp = ">157°" if d & DRV_T157 else ">150°" if d & DRV_T150 else ">143°" if d & DRV_T143 else ">120°" if d & DRV_T120 else "<120°"
             cells["cs"].set(f"{cs_} / 31")
             cells["temp"].set(temp, "#ff7b72" if d & DRV_T120 else None)
-            cells["drvflags"].set(" ".join(flags) if flags else "yok", "#ff7b72" if flags else None)
+            cells["drvflags"].set(" ".join(flags) if flags else "none", "#ff7b72" if flags else None)
             cells["tmcreset"].set(str(h.tmc_resets), "#ff7b72" if h.tmc_resets else None)
             cells["tmcuart"].set(str(h.tmc_uart_errors), "#ffa657" if h.tmc_uart_errors else None)
             cells["drv"].set(f"0x{d:08X}")
             # warnings from health (encoder / driver)
             if d & DRV_OT:
-                self.warnings["tmc_ot"] = ("fault", "TMC2208 AŞIRI SICAKLIK: sürücü kapandı")
+                self.warnings["tmc_ot"] = ("fault", "TMC2208 OVERTEMPERATURE: driver shut down")
             elif d & DRV_OTPW:
-                self.warnings["tmc_ot"] = ("warn", "TMC2208 sıcaklık ön uyarısı (120 °C) -- akımı düşürün / soğutun")
+                self.warnings["tmc_ot"] = ("warn", "TMC2208 temperature pre-warning (120 °C) -- lower the current / add cooling")
             else:
                 self.warnings.pop("tmc_ot", None)
             if d & (DRV_S2GA | DRV_S2GB | DRV_S2VSA | DRV_S2VSB):
-                self.warnings["tmc_short"] = ("fault", "TMC2208 KISA DEVRE bayrağı: motor kablosunu kontrol edin")
+                self.warnings["tmc_short"] = ("fault", "TMC2208 SHORT flag: check the motor wiring")
             else:
                 self.warnings.pop("tmc_short", None)
             if (d & (DRV_OLA | DRV_OLB)) and self.last_telem and abs(self.last_telem.cmd_vel_10) > 50:
-                self.warnings["tmc_ol"] = ("warn", "TMC2208 açık faz bayrağı hareket halinde: motor kablosu")
+                self.warnings["tmc_ol"] = ("warn", "TMC2208 open-load flag while moving: motor wiring")
             else:
                 self.warnings.pop("tmc_ol", None)
             p = self.prev_health
             if p:
-                for key, a, b, text in (("enc_i2c", h.enc_i2c_errors, p.enc_i2c_errors, "Encoder I2C hataları artıyor"),
-                                        ("enc_rej", h.enc_rejects, p.enc_rejects, "Encoder makullük retleri (gürültü / DIR pini)"),
-                                        ("tmc_uart", h.tmc_uart_errors, p.tmc_uart_errors, "TMC2208 UART hataları artıyor")):
+                for key, a, b, text in (("enc_i2c", h.enc_i2c_errors, p.enc_i2c_errors, "Encoder I2C errors rising"),
+                                        ("enc_rej", h.enc_rejects, p.enc_rejects, "Encoder plausibility rejects (noise / DIR pin)"),
+                                        ("tmc_uart", h.tmc_uart_errors, p.tmc_uart_errors, "TMC2208 UART errors rising")):
                     if a > b:
                         self.warnings[key] = ("warn", f"{text} (+{a - b}/s)")
                     else:
                         self.warnings.pop(key, None)
             if h.overruns:
-                self.warnings["overrun"] = ("warn", f"Kontrol döngüsü aşımı: {h.overruns}/s")
+                self.warnings["overrun"] = ("warn", f"Control loop overruns: {h.overruns}/s")
             else:
                 self.warnings.pop("overrun", None)
 
@@ -561,7 +561,7 @@ class MainWindow(QMainWindow):
 
         self.plots.redraw()
         if self.recorder.active:
-            self.rec_label.setText(f"{self.recorder.rows} satır  {self.recorder.path}")
+            self.rec_label.setText(f"{self.recorder.rows} rows  {self.recorder.path}")
 
     def closeEvent(self, ev):
         self.recorder.stop()

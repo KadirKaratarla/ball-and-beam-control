@@ -913,6 +913,33 @@ kalıcı hatası 0,2–0,5 cm olduğu için band **≥ 0,5 cm** olmalı
 
 ---
 
+## K-029 — Arayüz İngilizceye çevrildi, ekran görüntüleri üretilebilir hâle geldi
+**Tarih:** 2026-09-29 · **Faz:** 7 · **Durum:** Uygulandı
+
+Depo paylaşıma açıldığı için arayüzde kullanıcıya görünen bütün metinler
+İngilizceye çevrildi (90 dize: durum şeritleri, uyarılar, arıza açıklamaları,
+sağlık sekmeleri, grafik başlıkları, kalibrasyon penceresi, kamera süreci
+mesajları).
+
+Yukarıdaki Faz 5 ve K-0xx kayıtlarında geçen Türkçe düğme adları o günün
+hâlini anlatır. Bugünkü karşılıkları: "Uygula" → Apply, "Varsayılana dön" →
+Defaults, "Yeniden tara" → Rescan, "Grafikleri ortala" → Recentre plots,
+"Kayıt" → Record.
+
+**Ekran görüntüleri artık üretiliyor** (`tools/make_screenshots.py`): arayüz
+gerçek kodla kurulup çiziliyor ve `QWidget.grab()` ile yakalanıyor, telemetri
+ise tanımlanmış tesis modelinden (K = 605 cm/s²/rad, 45 ms gecikme, firmware'in
+kendi kazançları) oynatılıyor. Sağlık sayaçları tezgâhtan gelen gerçek
+değerler. Böylece arayüz her değiştiğinde belgelerdeki görüntüler düzenek
+kurmadan yenilenebiliyor — canlı oturum kaydı değil, arayüzün kendisinin
+çizimi.
+
+**Bilerek değiştirilmeyen:** `assets/gif/` altındaki GIF'ler ve
+`assets/video/` içindeki kayıtlar eski Türkçe arayüzü gösteriyor; yeniden
+çekim gerektirdiği için oldukları gibi bırakıldı.
+
+---
+
 ## Referans: Doğrulanmış pin haritası (Faz 1.3 sonu)
 
 | Sinyal | ESP32-S3 | Notlar |

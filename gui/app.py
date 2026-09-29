@@ -46,12 +46,12 @@ def main():
         except Exception:
             pass
         box = QMessageBox()
-        box.setWindowTitle("Kamera kalibrasyonu")
-        box.setText(f"Kayıtlı kalibrasyon bulundu ({created}).\n\n"
-                    "Işık ve kamera konumu değişmediyse eski ayarla devam edebilirsiniz; "
-                    "aksi halde yeni kalibrasyon yapın.")
-        b_old = box.addButton("Eski ayarla devam et", QMessageBox.AcceptRole)
-        b_new = box.addButton("Yeni kalibrasyon", QMessageBox.ActionRole)
+        box.setWindowTitle("Camera calibration")
+        box.setText(f"A saved calibration was found ({created}).\n\n"
+                    "If the lighting and the camera position have not changed you can carry on "
+                    "with it; otherwise run a new calibration.")
+        b_old = box.addButton("Use the saved one", QMessageBox.AcceptRole)
+        b_new = box.addButton("New calibration", QMessageBox.ActionRole)
         box.setDefaultButton(b_new)
         box.exec()
         skip = box.clickedButton() is b_old

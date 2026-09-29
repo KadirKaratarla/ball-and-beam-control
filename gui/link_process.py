@@ -152,7 +152,7 @@ def _camera_run(cam_cmd_q, out_q, pos_q, opts):
                 n = 0
                 out_q.put(("camera", "error", f"cam_count: {e!r}"))
             if n < 1:
-                out_q.put(("camera", "missing", "PS3 Eye bulunamadı -- USB'yi takın"))
+                out_q.put(("camera", "missing", "PS3 Eye not found -- plug in the USB"))
                 if idle(CAMERA_RETRY_S):
                     return
                 continue
@@ -161,7 +161,7 @@ def _camera_run(cam_cmd_q, out_q, pos_q, opts):
             try:
                 cam = calibrate.open_camera(opts.get("id", 0), opts.get("fps", 100))
             except Exception as e:
-                out_q.put(("camera", "missing", f"açılamadı: {e}"))
+                out_q.put(("camera", "missing", f"could not open: {e}"))
                 if idle(CAMERA_RETRY_S):
                     return
                 continue
@@ -173,17 +173,17 @@ def _camera_run(cam_cmd_q, out_q, pos_q, opts):
                     # after the camera was unplugged): no wizard, the light
                     # and the camera pose have not changed.
                     trk.apply_calibration_to_camera(cam, calib_dict)
-                    out_q.put(("camera", "calibrating", f"kayıtlı kalibrasyon {calib_dict.get('created', '?')}"))
+                    out_q.put(("camera", "calibrating", f"saved calibration {calib_dict.get('created', '?')}"))
                 elif opts.get("skip_calibration"):
                     calib_dict = trk.load_calibration(opts["calibration_path"])
                     trk.apply_calibration_to_camera(cam, calib_dict)
-                    out_q.put(("camera", "calibrating", f"kayıtlı kalibrasyon {calib_dict.get('created', '?')}"))
+                    out_q.put(("camera", "calibrating", f"saved calibration {calib_dict.get('created', '?')}"))
                 else:
-                    out_q.put(("camera", "calibrating", "sihirbaz açık -- OpenCV penceresi"))
+                    out_q.put(("camera", "calibrating", "wizard open -- OpenCV window"))
                     calib = calibrate.run(cam, opts.get("beam_cm", 45.0), opts.get("scale", 2),
                                           opts["calibration_path"])
                     if calib is None or not calib.validation or not calib.validation.get("passed"):
-                        out_q.put(("camera", "error", "kalibrasyon iptal/başarısız -- 'Yeniden tara'"))
+                        out_q.put(("camera", "error", "calibration cancelled/failed -- press 'Rescan'"))
                         cam.end()
                         if idle(3600):
                             return
@@ -221,7 +221,7 @@ def _camera_run(cam_cmd_q, out_q, pos_q, opts):
                 if idle(CAMERA_RETRY_S):
                     return
     except Exception as e:
-        out_q.put(("camera", "error", f"kamera süreci hatası: {e!r}"))
+        out_q.put(("camera", "error", f"camera process error: {e!r}"))
 
 
 # --------------------------------------------------------------------------
@@ -281,7 +281,7 @@ class LinkProxy(QObject):
         way out. The ESP link is untouched -- it lives in the other process.
         """
         self.cam_restarts += 1
-        self.cam_state, self.cam_detail = "missing", reason or "kamera yanıt vermiyor"
+        self.cam_state, self.cam_detail = "missing", reason or "camera not responding"
         self.camera_state.emit(self.cam_state, self.cam_detail)
         try:
             if self.cam_proc and self.cam_proc.is_alive():
@@ -350,10 +350,10 @@ class LinkProxy(QObject):
         if self.cam_state == "tracking" and \
                 time.perf_counter() - self._last_pos_t > CAMERA_STALL_S and \
                 time.perf_counter() - self._cam_started_at > CAMERA_RESTART_GRACE_S:
-            self.restart_camera("kamera çekildi / yanıt vermiyor")
+            self.restart_camera("camera unplugged / not responding")
         elif self.cam_proc and not self.cam_proc.is_alive() and \
                 time.perf_counter() - self._cam_started_at > CAMERA_RESTART_GRACE_S:
-            self.restart_camera("kamera süreci kapandı")
+            self.restart_camera("camera process exited")
 
     def drain(self):
         self.pump()

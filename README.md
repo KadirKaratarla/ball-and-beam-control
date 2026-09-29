@@ -175,7 +175,7 @@ Firmware'in derlenmiş varsayılanları (`bb_esp32s3/src/config.h`):
 |---|---|---|---|
 | 0,74 °/cm | 0,06 °/(cm·s) | 0,50 °·s/cm | 0,15 s |
 
-Arayüzden canlı değiştirilebilir, **Varsayılana dön** ile geri alınır. Kazançları
+Arayüzden canlı değiştirilebilir, **Defaults** düğmesiyle geri alınır. Kazançları
 kendi düzeneğinde yeniden bulacaksan:
 
 * Aşımın kaynağı çoğunlukla **sönüm**: ζ = Kd·K° / (2·√(Kp·K°)). Bu düzenekte

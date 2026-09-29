@@ -39,7 +39,7 @@ class BeamView(QWidget):
         self.ball_valid = False
         self.state = "?"
         self.setMinimumHeight(0)
-        self.setToolTip("Setpoint için beam üzerine tıklayın")
+        self.setToolTip("Click the beam to set the target")
 
     def update_state(self, x_cm, valid, x_set_cm, theta_deg, phi_deg, state):
         self.x_cm, self.ball_valid, self.x_set_cm = x_cm, valid, x_set_cm
@@ -124,7 +124,7 @@ class BeamView(QWidget):
         qp.drawEllipse(QPointF(cx, cy), 4, 4)
         qp.setPen(QPen(TEXT))
         qp.setFont(QFont("Segoe UI", 8))
-        qp.drawText(QRectF(cx - 50, cy + 4, 100, 13), Qt.AlignCenter, f"krank {self.phi_deg:+.1f}°")
+        qp.drawText(QRectF(cx - 50, cy + 4, 100, 13), Qt.AlignCenter, f"crank {self.phi_deg:+.1f}°")
 
     def paintEvent(self, ev):
         qp = QPainter(self)
@@ -183,4 +183,4 @@ class BeamView(QWidget):
         qp.drawText(QRectF(8, 4, 200, 15), Qt.AlignLeft, f"θ {self.theta_deg:+.2f}°   {self.state}")
         qp.setFont(QFont("Segoe UI", 8))
         qp.drawText(QRectF(tower_x - 22, floor + 3, 70, 13), Qt.AlignLeft, "p1 motor")
-        qp.drawText(QRectF(p2.x() - 62, floor + 3, 70, 13), Qt.AlignRight, "p2 mafsal")
+        qp.drawText(QRectF(p2.x() - 62, floor + 3, 70, 13), Qt.AlignRight, "p2 hinge")
